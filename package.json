@@ -18,5 +18,7 @@
     "mocha": "^8.0.1",
     "node-gyp": "^7.0.0"
   },
-  "dependencies": {}
+  "dependencies": {
+    "node-addon-api": "^3.0.0"
+  }
 }
