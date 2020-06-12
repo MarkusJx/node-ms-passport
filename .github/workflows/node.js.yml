@@ -26,5 +26,5 @@ jobs:
         node-version: ${{ matrix.node-version }}
     - name: setup-msbuild
       uses: microsoft/setup-msbuild@v1
-    - run: npm run-script build
+    - run: npm install
     - run: npm test
