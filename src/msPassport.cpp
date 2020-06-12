@@ -192,9 +192,13 @@ Napi::Boolean writeCredential(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING, STRING, STRING);
 
     try {
-        std::string target = info[0].As<Napi::String>();
-        std::string user = info[1].As<Napi::String>();
-        std::string password = info[2].As<Napi::String>();
+        std::u16string target_u16 = info[0].As<Napi::String>();
+        std::u16string user_u16 = info[1].As<Napi::String>();
+        std::u16string password_u16 = info[2].As<Napi::String>();
+
+        std::wstring target(target_u16.begin(), target_u16.end());
+        std::wstring user(user_u16.begin(), user_u16.end());
+        std::wstring password(password_u16.begin(), password_u16.end());
 
         return Napi::Boolean::New(info.Env(), credentials::write(target, user, password));
     } CATCH_EXCEPTIONS
@@ -205,14 +209,15 @@ Napi::Value readCredential(const Napi::CallbackInfo &info) {
 
     try {
         Napi::Env env = info.Env();
-        std::string target = info[0].As<Napi::String>();
-        std::string user, password;
+        std::u16string target_utf16 = info[0].As<Napi::String>().Utf16Value();
+        std::wstring target(target_utf16.begin(), target_utf16.end());
+        std::wstring user, password;
 
         if (credentials::read(target, user, password)) {
             Napi::Object obj = Napi::Object::New(env);
 
-            obj.Set("username", Napi::String::New(env, user));
-            obj.Set("password", Napi::String::New(env, password));
+            obj.Set("username", Napi::String::New(env, std::u16string(user.begin(), user.end())));
+            obj.Set("password", Napi::String::New(env, std::u16string(password.begin(), password.end())));
             return obj;
         } else {
             return env.Null();
@@ -224,9 +229,9 @@ Napi::Boolean removeCredential(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING);
 
     try {
-        std::string target = info[0].As<Napi::String>();
+        std::u16string target = info[0].As<Napi::String>();
 
-        return Napi::Boolean::New(info.Env(), credentials::remove(target));
+        return Napi::Boolean::New(info.Env(), credentials::remove(std::wstring(target.begin(), target.end())));
     } CATCH_EXCEPTIONS
 }
 
