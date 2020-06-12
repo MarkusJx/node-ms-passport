@@ -87,12 +87,14 @@ namespace GacInstaller
                 if (args[0] == "install")
                 {
                     new System.EnterpriseServices.Internal.Publish().GacInstall(System.IO.Path.GetFullPath(args[1]));
-                    if (!IsAssemblyInGAC(args[1]))
+                    if (!IsAssemblyInGAC(args[1].Replace(".dll", "")))
                     {
+                        Console.WriteLine("Assembly installation failed");
                         return 2;
                     }
                     else
                     {
+                        Console.WriteLine("Assembly successfully installed");
                         return 0;
                     }
                 }
@@ -102,25 +104,30 @@ namespace GacInstaller
 
                     if (IsAssemblyInGAC(args[1]))
                     {
+                        Console.WriteLine("Assembly removal failed");
                         return 2;
                     }
                     else
                     {
+                        Console.WriteLine("Assembly successfully removed");
                         return 0;
                     }
                 }
                 else if (args[0] == "check")
                 {
+                    Console.WriteLine("Assembly in GAC: ");
                     Console.WriteLine(IsAssemblyInGAC(args[1]));
                     return 0;
                 }
                 else
                 {
+                    Console.WriteLine("Unknown command");
                     return 1;
                 }
             }
             else
             {
+                Console.WriteLine("2 Arguments required");
                 return -1;
             }
         }

@@ -1,5 +1,4 @@
 const assert = require("assert");
-const {describe} = require("mocha");
 const {passport, passport_utils, credentials} = require('./node-ms-passport');
 
 describe('Passport test', function () {

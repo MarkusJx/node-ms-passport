@@ -7,13 +7,16 @@
   "scripts": {
     "build": "node_modules/.bin/node-gyp rebuild -j 8",
     "prebuild": "node prebuild.js",
-    "postbuild": "node copy-deps.js copy"
+    "postbuild": "node copy-deps.js copy",
+    "install": "npm run-script build",
+    "postinstall": ".\\passport\\GacInstaller.exe install CSNodeMsPassport.dll"
   },
   "keywords": [],
   "author": "MarkusJx",
   "license": "MIT",
   "devDependencies": {
-    "mocha": "^8.0.1"
+    "mocha": "^8.0.1",
+    "node-gyp": "^7.0.0"
   },
   "dependencies": {}
 }
