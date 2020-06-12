@@ -1,5 +1,6 @@
 /NodeMsPassport/
-/build/
 /src/
 /.idea/
 /.github/
+/build64/
+/build32/

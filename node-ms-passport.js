@@ -1,4 +1,4 @@
-const passport_native = require('./passport/passport.node');
+const passport_native = require('./passport/' + ((process.arch === 'x64') ? 'x64' : 'x86') + '/passport.node');
 
 module.exports = {
     /**
@@ -13,7 +13,7 @@ module.exports = {
          *
          * @returns {boolean} true if passport is available
          */
-        passportAvailable: function() {
+        passportAvailable: function () {
             return passport_native.js_passportAvailable();
         },
         /**
@@ -23,7 +23,7 @@ module.exports = {
          * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
          *         data will contain the public key as hex string
          */
-        createPassportKey: function(accountId) {
+        createPassportKey: function (accountId) {
             return passport_native.js_createPassportKey(accountId);
         },
         /**
@@ -34,7 +34,7 @@ module.exports = {
          * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
          *         data will contain the public key as hex string
          */
-        passportSign: function(accountId, challenge) {
+        passportSign: function (accountId, challenge) {
             return passport_native.js_passportSign(accountId, challenge);
         },
         /**
@@ -44,7 +44,7 @@ module.exports = {
          * @return {number} 0, if the account could be deleted, 1, if a unknown error occurred, 2,
          *         if the access was denied and 3, if the key is already deleted
          */
-        deletePassportAccount: function(accountId) {
+        deletePassportAccount: function (accountId) {
             return passport_native.js_deletePassportAccount(accountId);
         },
         /**
@@ -54,7 +54,7 @@ module.exports = {
          * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
          *         data will contain the public key as hex string
          */
-        getPublicKey: function(accountId) {
+        getPublicKey: function (accountId) {
             return passport_native.js_getPublicKey(accountId);
         },
         /**
@@ -64,7 +64,7 @@ module.exports = {
          * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
          *         data will contain the public key as hex string
          */
-        getPublicKeyHash: function(accountId) {
+        getPublicKeyHash: function (accountId) {
             return passport_native.js_getPublicKeyHash(accountId);
         },
         /**
@@ -75,7 +75,7 @@ module.exports = {
          * @param publicKey {string} the public key of the application
          * @return {boolean} if the signature matches
          */
-        verifySignature: function(challenge, signature, publicKey) {
+        verifySignature: function (challenge, signature, publicKey) {
             return passport_native.js_verifySignature(challenge, signature, publicKey);
         }
     },
@@ -91,7 +91,7 @@ module.exports = {
          * @param {string} password the password to store
          * @return {boolean} if the operation was successful
          */
-        write: function(target, user, password) {
+        write: function (target, user, password) {
             return passport_native.js_writeCredential(target, user, password);
         },
         /**
@@ -100,7 +100,7 @@ module.exports = {
          * @param target {string} the account id
          * @return {{username: string, password: string} | null} the username and password or null if unsuccessful
          */
-        read: function(target) {
+        read: function (target) {
             return passport_native.js_readCredential(target);
         },
         /**
@@ -120,7 +120,7 @@ module.exports = {
          * @param length {number} the length of the challenge in bytes
          * @return {string} the random bytes as hex string
          */
-        generateRandom: function(length) {
+        generateRandom: function (length) {
             return passport_native.js_generateRandom(length);
         }
     }

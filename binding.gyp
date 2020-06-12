@@ -3,7 +3,7 @@
         "conditions":[
             ["OS=='win'", {
                 'libraries': [
-                    '../NodeMsPassport/x64/Release/NodeMsPassport'
+                    '../NodeMsPassport/x64/Release/NodeMsPassport',
                 ]
             }],
             ["OS=='mac'", {

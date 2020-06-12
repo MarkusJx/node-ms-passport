@@ -12,8 +12,14 @@ file(GLOB src
         *.cpp
         )
 
-include_directories(${CMAKE_JS_INC} crypto "../NodeMsPassport/NodeMsPassport")
-link_directories("../NodeMsPassport/x64/Release")
+include_directories(${CMAKE_JS_INC} "../NodeMsPassport/NodeMsPassport")
+
+if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "4")
+    link_directories("../NodeMsPassport/Release")
+else ()
+    link_directories("../NodeMsPassport/x64/Release")
+endif ()
+
 
 add_library(${PROJECT_NAME} SHARED ${src})
 

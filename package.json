@@ -5,17 +5,17 @@
   "repository": "https://github.com/MarkusJx/node-ms-passport",
   "gypfile": true,
   "scripts": {
-    "build": "node_modules/.bin/node-gyp rebuild -j 8",
+    "build": "cmake-js build --arch ia32 -d src --out build32 && cmake-js build --arch x64 -d src --out build64",
     "prebuild": "node prebuild.js",
     "postbuild": "node copy-deps.js copy",
-    "install": ".\\passport\\GacInstaller.exe install CSNodeMsPassport.dll"
+    "install": "node install.js"
   },
   "keywords": [],
   "author": "MarkusJx",
   "license": "MIT",
   "devDependencies": {
-    "mocha": "^8.0.1",
-    "node-gyp": "^7.0.0"
+    "cmake-js": "^6.1.0",
+    "mocha": "^8.0.1"
   },
   "dependencies": {
     "node-addon-api": "^3.0.0"
