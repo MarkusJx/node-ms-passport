@@ -41,6 +41,8 @@ namespace nodeMsPassport {
 
 			NODEMSPASSPORT_EXPORT char* passportSign(int& status, int& outSize, const char* accountId, const char* challenge, int challengeSize);
 
+			NODEMSPASSPORT_EXPORT char* getPublicKey(int& status, int& outSize, const char* accountId);
+
 			NODEMSPASSPORT_EXPORT char* getPublicKeyHash(int& status, int& outSize, const char* accountId);
 
 			NODEMSPASSPORT_EXPORT bool verifyChallenge(const char* challenge, int challengeSize, const char* signature, int signatureSize, const char* publicKey, int publicKeySize);
@@ -127,6 +129,26 @@ namespace nodeMsPassport {
 		}
 
 		/**
+		 * Get the public key
+		 *
+		 * @param accountId the id of the account
+		 * @return the result of the operation
+		 */
+		inline OperationResult getPublicKey(const std::string& accountId) {
+			int status, size = 0;
+			char* data = unmanaged::getPublicKey(status, size, accountId.c_str());
+
+			std::vector<char> dt;
+			if (status == 0) {
+				dt.resize(size);
+				memcpy(dt.data(), data, size);
+			}
+
+			unmanaged::freeData(data);
+			return OperationResult(dt, status);
+		}
+
+		/**
 		 * Get a SHA-256 hash of the public key
 		 *
 		 * @param accountId the id of the account
@@ -162,7 +184,7 @@ namespace nodeMsPassport {
 		 * Delete a passport account
 		 *
 		 * @param accountId the id of the account to delete
-		 * @return 0, if the account could be deleted, 1, if a unknown error occured, 2,
+		 * @return 0, if the account could be deleted, 1, if a unknown error occurred, 2,
 		 *         if the access was denied and 3, if the key is already deleted
 		 */
 		inline int deletePassportAccount(const std::string& accountId) {

@@ -98,7 +98,7 @@ namespace CSNodeMsPassport
             return res;
         }
 
-        public static PassportResult GetPublicKeyHash(string accountId)
+        public static PassportResult GetPublicKey(string accountId)
         {
             Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
             KeyCredentialRetrievalResult retrieveResult = task.Result;
@@ -110,9 +110,9 @@ namespace CSNodeMsPassport
                 KeyCredential userCredential = retrieveResult.Credential;
 
                 HashAlgorithmProvider hashProvider = HashAlgorithmProvider.OpenAlgorithm(HashAlgorithmNames.Sha256);
-                IBuffer publicKeyHash = hashProvider.HashData(userCredential.RetrievePublicKey());
+                IBuffer publicKey = userCredential.RetrievePublicKey();
 
-                CryptographicBuffer.CopyToByteArray(publicKeyHash, out res.buffer);
+                CryptographicBuffer.CopyToByteArray(publicKey, out res.buffer);
                 res.status = 0;
             }
             else if (retrieveResult.Status == KeyCredentialStatus.UserCanceled)
@@ -128,6 +128,20 @@ namespace CSNodeMsPassport
             else
             {
                 res.status = 1;
+            }
+
+            return res;
+        }
+
+        public static PassportResult GetPublicKeyHash(string accountId)
+        {
+            PassportResult res = GetPublicKey(accountId);
+            if (res.status == 0)
+            {
+                HashAlgorithmProvider hashProvider = HashAlgorithmProvider.OpenAlgorithm(HashAlgorithmNames.Sha256);
+                IBuffer publicKeyHash = hashProvider.HashData(CryptographicBuffer.CreateFromByteArray(res.buffer));
+
+                CryptographicBuffer.CopyToByteArray(publicKeyHash, out res.buffer);
             }
 
             return res;

@@ -91,6 +91,19 @@ NODEMSPASSPORT_EXPORT char* passport::unmanaged::passportSign(int& status, int& 
 	}
 }
 
+NODEMSPASSPORT_EXPORT char* passport::unmanaged::getPublicKey(int& status, int& outSize, const char* accountId) {
+	CSNodeMsPassport::Passport::PassportResult res = CSNodeMsPassport::Passport::GetPublicKey(CharToString(accountId));
+	status = res.status;
+
+	if (res.status == 0) {
+		outSize = res.buffer->Length;
+		return byteArrayToChar(res.buffer);
+	}
+	else {
+		return nullptr;
+	}
+}
+
 NODEMSPASSPORT_EXPORT char* passport::unmanaged::getPublicKeyHash(int& status, int& outSize, const char* accountId) {
 	CSNodeMsPassport::Passport::PassportResult res = CSNodeMsPassport::Passport::GetPublicKeyHash(CharToString(accountId));
 	status = res.status;
