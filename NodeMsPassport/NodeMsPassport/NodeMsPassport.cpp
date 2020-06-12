@@ -125,37 +125,28 @@ NODEMSPASSPORT_EXPORT int passport::unmanaged::deletePassportAccount(const char*
 	return CSNodeMsPassport::Passport::DeletePassportAccount(CharToString(accountId));
 }
 
-bool to_wstring(const std::string& in, std::wstring& out) {
-	out.resize(in.size() + 1);
-	size_t written = 0;
-	errno_t err = mbstowcs_s(&written, (wchar_t*)out.data(), out.size(), in.c_str(), in.size());
-	if (err != 0 || written != out.size()) {
-		return false;
-	}
-	else {
-		return true;
-	}
-}
-
-std::vector<unsigned char> copyToChar(const std::wstring& data) {
+std::vector<unsigned char> copyToChar(const std::wstring& data, bool& ok) {
 	std::vector<unsigned char> tmp;
 	tmp.resize(data.size() * sizeof(wchar_t));
 
-	memcpy_s(tmp.data(), tmp.size(), data.c_str(), data.size() * sizeof(wchar_t));
+	ok = memcpy_s(tmp.data(), tmp.size(), data.c_str(), data.size() * sizeof(wchar_t)) == 0;
 
 	return tmp;
 }
 
-std::wstring copyToWChar(char* ptr, int sizeInBytes) {
+std::wstring copyToWChar(char* ptr, int sizeInBytes, bool& ok) {
 	std::wstring out;
 	out.resize(sizeInBytes / sizeof(wchar_t));
 
-	memcpy_s((wchar_t*) out.data(), out.size() * sizeof(wchar_t), ptr, sizeInBytes);
+	ok = memcpy_s((wchar_t*) out.data(), out.size() * sizeof(wchar_t), ptr, sizeInBytes) == 0;
 	return out;
 }
 
 NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const std::wstring& password) {
-	std::vector<unsigned char> passData = copyToChar(password);
+	bool ok;
+	std::vector<unsigned char> passData = copyToChar(password, ok);
+	if (!ok) return false;
+
 	DWORD cbCreds = (DWORD)passData.size();
 
 	CREDENTIALW cred = { 0 };
@@ -174,14 +165,18 @@ NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const 
 NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring& password) {
 	PCREDENTIALW pcred;
 
-	BOOL ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
+	bool ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
 	if (!ok) return nullptr;
 
 	username = pcred->UserName;
 	char *credential = (char*)pcred->CredentialBlob;
 	int credSize = pcred->CredentialBlobSize;
 
-	password = copyToWChar(credential, credSize);
+	password = copyToWChar(credential, credSize, ok);
+	if (!ok) {
+		::CredFree(pcred);
+		return nullptr;
+	}
 
 	return pcred;
 }

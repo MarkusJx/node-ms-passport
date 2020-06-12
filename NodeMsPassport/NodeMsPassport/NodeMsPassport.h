@@ -200,19 +200,6 @@ namespace nodeMsPassport {
 			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring& password);
 
 			NODEMSPASSPORT_EXPORT void freePcred(void* data);
-
-			inline bool to_string(const std::wstring& in, std::string& out) {
-				out.resize(in.size() + 1);
-				size_t written = 0;
-				errno_t err = wcstombs_s(&written, (char *) out.data(), out.size(), in.c_str(), in.size());
-				if (err != 0 || written != out.size()) {
-					return false;
-				}
-				else {
-					out.resize(in.size());
-					return true;
-				}
-			}
 		}
 
 		/**
