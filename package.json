@@ -1,0 +1,19 @@
+{
+  "name": "node-ms-passport",
+  "version": "0.0.1",
+  "description": "Microsoft passport for node js",
+  "repository": "https://github.com/MarkusJx/node-ms-passport",
+  "gypfile": true,
+  "scripts": {
+    "build": "node_modules/.bin/node-gyp rebuild -j 8",
+    "prebuild": "node prebuild.js",
+    "postbuild": "node copy-deps.js copy"
+  },
+  "keywords": [],
+  "author": "MarkusJx",
+  "license": "MIT",
+  "devDependencies": {
+    "mocha": "^8.0.1"
+  },
+  "dependencies": {}
+}

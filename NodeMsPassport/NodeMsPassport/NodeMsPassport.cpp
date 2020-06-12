@@ -138,7 +138,7 @@ bool to_wstring(const std::string& in, std::wstring& out) {
 }
 
 NODEMSPASSPORT_EXPORT bool credentials::write(const std::string& target, const std::string& user, const std::string& password) {
-	DWORD cbCreds = (DWORD)password.size() + 1;
+	DWORD cbCreds = (DWORD)password.size();
 
 	CREDENTIALW cred = { 0 };
 	cred.Type = CRED_TYPE_GENERIC;
