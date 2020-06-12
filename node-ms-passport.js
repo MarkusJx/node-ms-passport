@@ -1,3 +1,14 @@
+// Check if this runs on windows and check if this is windows 10
+if (process.platform !== 'win32') {
+    throw new Error("OS is not supported. Only windows 10 is supported");
+} else {
+    let version = require('child_process').execSync('ver').toString().trim();
+    version = version.split("[")[1].replace("Version ", "").split(".")[0];
+    if (Number(version) !== 10) {
+        throw new Error("Windows version is not supported. Only windows 10 is supported");
+    }
+}
+
 const passport_native = require('./passport/' + ((process.arch === 'x64') ? 'x64' : 'x86') + '/passport.node');
 
 module.exports = {
@@ -32,7 +43,7 @@ module.exports = {
          * @param accountId {string} the account id
          * @param challenge {string} the challenge to sign
          * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
-         *         data will contain the public key as hex string
+         *         data will contain the signature as hex string
          */
         passportSign: function (accountId, challenge) {
             return passport_native.js_passportSign(accountId, challenge);
@@ -62,7 +73,7 @@ module.exports = {
          *
          * @param accountId {string} the account id for the public key to get
          * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
-         *         data will contain the public key as hex string
+         *         data will contain the public key hash as hex string
          */
         getPublicKeyHash: function (accountId) {
             return passport_native.js_getPublicKeyHash(accountId);
@@ -113,6 +124,9 @@ module.exports = {
             return passport_native.js_removeCredential(target);
         }
     },
+    /**
+     * Utilities
+     */
     passport_utils: {
         /**
          * Generate random bytes
