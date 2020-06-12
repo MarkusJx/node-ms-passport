@@ -63,7 +63,7 @@ If the status is zero, everything was ok, 1 if a unknown error occurred, 2 if th
 
 Writing and reading credentials to and from the windows credential manager:
 ```js
-const {credentials} = require('./node-ms-passport');
+const {credentials} = require('node-ms-passport');
 
 // Write credentials
 let successful = credentials.write("test/test", "test", "testPassword");
