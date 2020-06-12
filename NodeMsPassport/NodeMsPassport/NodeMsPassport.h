@@ -146,6 +146,14 @@ namespace nodeMsPassport {
 			return OperationResult(dt, status);
 		}
 
+		/**
+		 * Verify a challenge signed by the passport application
+		 *
+		 * @param challenge the challenge used
+		 * @param the signature returned by passport
+		 * @param the public key of the user
+		 * @return if the signature matched
+		 */
 		inline bool verifySignature(const std::vector<char>& challenge, const std::vector<char>& signature, const std::vector<char>& publicKey) {
 			return unmanaged::verifyChallenge(challenge.data(), (int)challenge.size(), signature.data(), (int)signature.size(), publicKey.data(), (int)publicKey.size());
 		}
