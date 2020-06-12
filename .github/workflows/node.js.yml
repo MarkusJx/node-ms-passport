@@ -14,10 +14,6 @@ jobs:
 
     runs-on: windows-latest
 
-    #strategy:
-    #  matrix:
-    #    node-version: [10.x, 12.x, 14.x]
-
     steps:
     - uses: actions/checkout@v2
     - name: Use Node.js 14.x
@@ -43,6 +39,8 @@ jobs:
         with:
           node-version: 14
           registry-url: https://registry.npmjs.org/
+      - name: setup-msbuild
+        uses: microsoft/setup-msbuild@v1
       - run: npm ci
         continue-on-error: true
       - run: npm publish
