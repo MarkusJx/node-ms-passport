@@ -23,10 +23,7 @@ jobs:
       - run: npm run-script build
         continue-on-error: true
       - run: npm pack
-      - name: Upload a Build Artifact
+      - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
-          path: node-ms-passport-0.0.1.tgz
-      - run: npm publish
-        env:
-          NODE_AUTH_TOKEN: ${{secrets.npm_token}}
+          path: node-ms-passport-*.tgz
