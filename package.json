@@ -8,8 +8,7 @@
     "build": "node_modules/.bin/node-gyp rebuild -j 8",
     "prebuild": "node prebuild.js",
     "postbuild": "node copy-deps.js copy",
-    "install": "npm run-script build",
-    "postinstall": ".\\passport\\GacInstaller.exe install CSNodeMsPassport.dll"
+    "install": ".\\passport\\GacInstaller.exe install CSNodeMsPassport.dll"
   },
   "keywords": [],
   "author": "MarkusJx",
