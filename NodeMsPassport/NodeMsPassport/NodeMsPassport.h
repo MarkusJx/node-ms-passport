@@ -197,7 +197,7 @@ namespace nodeMsPassport {
 	 */
 	namespace credentials {
 		namespace util {
-			NODEMSPASSPORT_EXPORT void* read(const std::string& target, wchar_t*& username, char*& cred, int& size);
+			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring& password);
 
 			NODEMSPASSPORT_EXPORT void freePcred(void* data);
 
@@ -223,7 +223,7 @@ namespace nodeMsPassport {
 		 * @param password the password to store
 		 * @return if the operation was successful
 		 */
-		NODEMSPASSPORT_EXPORT bool write(const std::string& target, const std::string& user, const std::string& password);
+		NODEMSPASSPORT_EXPORT bool write(const std::wstring& target, const std::wstring& user, const std::wstring& password);
 
 		/**
 		 * Read data from the password storage
@@ -233,18 +233,15 @@ namespace nodeMsPassport {
 		 * @param password the password
 		 * @return if the operation was successful
 		 */
-		inline bool read(const std::string& target, std::string& user, std::string& password) {
+		inline bool read(const std::wstring& target, std::wstring& user, std::wstring& password) {
 			wchar_t* username;
-			char* cred;
-			int size;
 
-			void* pcred = util::read(target, username, cred, size);
+			void* pcred = util::read(target, username, password);
 			if (pcred == nullptr) {
 				return false;
 			}
 			else {
-				if (!util::to_string(username, user)) return false;
-				password = std::string(cred, size);
+				user = std::wstring(username);
 				util::freePcred(pcred);
 
 				return true;
@@ -257,6 +254,6 @@ namespace nodeMsPassport {
 		 * @param target the account id to remove
 		 * @return if the operation was successful
 		 */
-		NODEMSPASSPORT_EXPORT bool remove(const std::string& target);
+		NODEMSPASSPORT_EXPORT bool remove(const std::wstring& target);
 	}
 }

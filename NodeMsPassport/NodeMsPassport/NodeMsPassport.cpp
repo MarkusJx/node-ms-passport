@@ -128,7 +128,7 @@ NODEMSPASSPORT_EXPORT int passport::unmanaged::deletePassportAccount(const char*
 bool to_wstring(const std::string& in, std::wstring& out) {
 	out.resize(in.size() + 1);
 	size_t written = 0;
-	errno_t err = mbstowcs_s(&written, (wchar_t *) out.data(), out.size(), in.c_str(), in.size());
+	errno_t err = mbstowcs_s(&written, (wchar_t*)out.data(), out.size(), in.c_str(), in.size());
 	if (err != 0 || written != out.size()) {
 		return false;
 	}
@@ -137,35 +137,51 @@ bool to_wstring(const std::string& in, std::wstring& out) {
 	}
 }
 
-NODEMSPASSPORT_EXPORT bool credentials::write(const std::string& target, const std::string& user, const std::string& password) {
-	DWORD cbCreds = (DWORD)password.size();
+std::vector<unsigned char> copyToChar(const std::wstring& data) {
+	std::vector<unsigned char> tmp;
+	tmp.resize(data.size() * sizeof(wchar_t));
+
+	memcpy_s(tmp.data(), tmp.size(), data.c_str(), data.size() * sizeof(wchar_t));
+
+	return tmp;
+}
+
+std::wstring copyToWChar(char* ptr, int sizeInBytes) {
+	std::wstring out;
+	out.resize(sizeInBytes / sizeof(wchar_t));
+
+	memcpy_s((wchar_t*) out.data(), out.size() * sizeof(wchar_t), ptr, sizeInBytes);
+	return out;
+}
+
+NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const std::wstring& password) {
+	std::vector<unsigned char> passData = copyToChar(password);
+	DWORD cbCreds = (DWORD)passData.size();
 
 	CREDENTIALW cred = { 0 };
 	cred.Type = CRED_TYPE_GENERIC;
 
-	cred.TargetName = (LPWSTR)_bstr_t(target.c_str());
+	cred.TargetName = (LPWSTR)target.c_str();
 	cred.CredentialBlobSize = cbCreds;
-	cred.CredentialBlob = (LPBYTE)password.c_str();
+	cred.CredentialBlob = (LPBYTE)passData.data();
 	cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
-	std::wstring res;
-	if (!to_wstring(user, res)) return false;
-	cred.UserName = (LPWSTR)res.c_str();
+	cred.UserName = (LPWSTR)user.c_str();
 
 	return ::CredWriteW(&cred, 0);
 }
 
-NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::string& target, wchar_t*& username, char*& cred, int& size) {
+NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring& password) {
 	PCREDENTIALW pcred;
-	std::wstring res;
-	if (!to_wstring(target, res)) return nullptr;
 
-	BOOL ok = ::CredReadW(res.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
+	BOOL ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
 	if (!ok) return nullptr;
 
 	username = pcred->UserName;
-	cred = (char*)pcred->CredentialBlob;
-	size = pcred->CredentialBlobSize;
+	char *credential = (char*)pcred->CredentialBlob;
+	int credSize = pcred->CredentialBlobSize;
+
+	password = copyToWChar(credential, credSize);
 
 	return pcred;
 }
@@ -174,8 +190,6 @@ NODEMSPASSPORT_EXPORT void credentials::util::freePcred(void* data) {
 	::CredFree((PCREDENTIALW)data);
 }
 
-NODEMSPASSPORT_EXPORT bool credentials::remove(const std::string& target) {
-	std::wstring res;
-	if (!to_wstring(target, res)) return false;
-	return ::CredDeleteW(res.c_str(), CRED_TYPE_GENERIC, 0);
+NODEMSPASSPORT_EXPORT bool credentials::remove(const std::wstring& target) {
+	return ::CredDeleteW(target.c_str(), CRED_TYPE_GENERIC, 0);
 }
