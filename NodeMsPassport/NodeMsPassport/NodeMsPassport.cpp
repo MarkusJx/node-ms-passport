@@ -174,14 +174,14 @@ bool protectCredential(std::wstring& toProtect) {
 		if (protectionType == CredUnprotected) {
 			toProtect_cpy = std::vector<wchar_t>(toProtect.begin(), toProtect.end());
 			DWORD protectedSize = 0;
-			if (!CredProtectW(false, toProtect_cpy.data(), (DWORD) toProtect_cpy.size(), nullptr, &protectedSize, nullptr)) {
+			if (!CredProtectW(false, toProtect_cpy.data(), (DWORD)toProtect_cpy.size(), nullptr, &protectedSize, nullptr)) {
 				DWORD dwErr = GetLastError();
 
 				if (dwErr == ERROR_INSUFFICIENT_BUFFER && protectedSize > 0) {
 					std::vector<wchar_t> outData;
 					outData.resize(protectedSize);
 
-					if (CredProtectW(false, toProtect_cpy.data(), (DWORD) toProtect_cpy.size(), outData.data(), &protectedSize, nullptr)) {
+					if (CredProtectW(false, toProtect_cpy.data(), (DWORD)toProtect_cpy.size(), outData.data(), &protectedSize, nullptr)) {
 						toProtect = std::wstring(outData.begin(), outData.end());
 						return true;
 					}
@@ -193,10 +193,13 @@ bool protectCredential(std::wstring& toProtect) {
 	return false;
 }
 
-NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const std::wstring& password) {
+NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const std::wstring& password, bool encrypt) {
 	bool ok;
 	std::wstring pass = password;
-	if (!protectCredential(pass)) return false;
+	if (encrypt) {
+		if (!protectCredential(pass)) return false;
+	}
+
 	std::vector<unsigned char> passData = copyToChar(pass, ok);
 	if (!ok) return false;
 
@@ -206,21 +209,21 @@ NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const 
 	cred.Type = CRED_TYPE_GENERIC;
 
 	// Copy target as a non-const qualified wchar array is required
-	std::vector<wchar_t> target_cpy(target.begin(), target.end());
-	cred.TargetName = target_cpy.data();
+	std::wstring target_cpy = target;
+	cred.TargetName = (wchar_t*)target_cpy.data();
 
 	cred.CredentialBlobSize = cbCreds;
 	cred.CredentialBlob = passData.data();
 	cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
 	// Copy user as a non-const qualified wchar array is required
-	std::vector<wchar_t> user_cpy(user.begin(), user.end());
-	cred.UserName = user_cpy.data();
+	std::wstring user_cpy = user;
+	cred.UserName = (wchar_t*)user_cpy.data();
 
 	return ::CredWriteW(&cred, 0);
 }
 
-NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring*& password) {
+NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring*& password, bool encrypt) {
 	PCREDENTIALW pcred;
 
 	bool ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
@@ -228,7 +231,10 @@ NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, 
 
 	std::wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
 	if (ok) {
-		ok = unprotectCredential(pass);
+		if (encrypt) {
+			ok = unprotectCredential(pass);
+		}
+
 		if (ok) {
 			username = pcred->UserName;
 			password = new std::wstring(pass.begin(), pass.end());

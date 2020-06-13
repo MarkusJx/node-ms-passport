@@ -197,7 +197,7 @@ namespace nodeMsPassport {
 	 */
 	namespace credentials {
 		namespace util {
-			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring*& password);
+			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring*& password, bool encrypt);
 
 			NODEMSPASSPORT_EXPORT void freePcred(void* data);
 
@@ -212,7 +212,7 @@ namespace nodeMsPassport {
 		 * @param password the password to store
 		 * @return if the operation was successful
 		 */
-		NODEMSPASSPORT_EXPORT bool write(const std::wstring& target, const std::wstring& user, const std::wstring& password);
+		NODEMSPASSPORT_EXPORT bool write(const std::wstring& target, const std::wstring& user, const std::wstring& password, bool encrypt);
 
 		/**
 		 * Read data from the password storage
@@ -222,11 +222,11 @@ namespace nodeMsPassport {
 		 * @param password the password
 		 * @return if the operation was successful
 		 */
-		inline bool read(const std::wstring& target, std::wstring& user, std::wstring& password) {
+		inline bool read(const std::wstring& target, std::wstring& user, std::wstring& password, bool encrypt) {
 			wchar_t* username;
 
 			std::wstring* pass;
-			void* pcred = util::read(target, username, pass);
+			void* pcred = util::read(target, username, pass, encrypt);
 			if (pcred == nullptr) {
 				return false;
 			}
