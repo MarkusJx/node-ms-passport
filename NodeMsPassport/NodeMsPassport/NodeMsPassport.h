@@ -114,7 +114,9 @@ namespace nodeMsPassport {
 	template<typename T>
 	class secure_vector : public util::basic_secure_vector<T> {
 	public:
-		using util::basic_secure_vector<T>::basic_secure_vector;
+        using util::basic_secure_vector<T>::basic_secure_vector;
+
+	    secure_vector() : util::basic_secure_vector<T>() {}
 
 		secure_vector(const std::vector<T>& vec) : util::basic_secure_vector<T>(vec.begin(), vec.end()) {}
 
@@ -126,6 +128,8 @@ namespace nodeMsPassport {
 	class secure_wstring : public util::basic_secure_wstring {
 	public:
 		using util::basic_secure_wstring::basic_secure_wstring;
+
+		secure_wstring() : util::basic_secure_wstring() {}
 
 		secure_wstring(const std::wstring& str) : util::basic_secure_wstring(str.begin(), str.end()) {}
 

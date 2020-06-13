@@ -4,8 +4,8 @@
 #include <NodeMsPassport.h>
 
 #define CHECK_ARGS(...) ::util::checkArgs(info, ::util::removeNamespace(__FUNCTION__), {__VA_ARGS__})
-#define CHECK_INDEX(index, size) if (index < 0) throw Napi::RangeError::New(env, "Negative index requested"); \
-                    else if (((size_t) index) >= size) throw Napi::RangeError::New(env, "Index out of range. Requested index: " + std::to_string(index) + ", array size: " + std::to_string(size))
+/*#define CHECK_INDEX(index, size) if (index < 0) throw Napi::RangeError::New(env, "Negative index requested"); \
+                    else if (((size_t) index) >= size) throw Napi::RangeError::New(env, "Index out of range. Requested index: " + std::to_string(index) + ", array size: " + std::to_string(size))*/
 #define CATCH_EXCEPTIONS catch (const std::exception &e) {throw Napi::Error::New(info.Env(), e.what());} catch (...) {throw Napi::Error::New(info.Env(), "An unknown exception occurred");}
 #define EXPORT(function) "js_" + ::util::removeNamespace(#function), Napi::Function::New(env, function)
 
@@ -77,9 +77,9 @@ namespace util {
     }
 }
 
-std::vector<char> string_to_binary(const std::string &source) {
+passport::util::secure_byte_vector string_to_binary(const std::string &source) {
     static unsigned int nibbles[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
-    std::vector<char> retval;
+    passport::util::secure_byte_vector retval;
     for (std::string::const_iterator it = source.begin(); it < source.end(); it += 2) {
         unsigned char v = 0;
         if (isxdigit(*it))
@@ -91,7 +91,7 @@ std::vector<char> string_to_binary(const std::string &source) {
     return retval;
 }
 
-std::string binary_to_string(const std::vector<char> &source) {
+std::string binary_to_string(const passport::util::secure_byte_vector &source) {
     static char syms[] = "0123456789ABCDEF";
     std::stringstream ss;
     for (std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<char> > >::value_type it : source)
@@ -135,7 +135,7 @@ Napi::Object passportSign(const Napi::CallbackInfo &info) {
 
     try {
         std::string account = info[0].As<Napi::String>();
-        std::vector<char> challenge = string_to_binary(info[1].As<Napi::String>().Utf8Value());
+        passport::util::secure_byte_vector challenge = string_to_binary(info[1].As<Napi::String>().Utf8Value());
 
         passport::OperationResult res = passport::passportSign(account, challenge);
 
@@ -181,9 +181,9 @@ Napi::Boolean verifySignature(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING, STRING, STRING);
 
     try {
-        std::vector<char> challenge = string_to_binary(info[0].As<Napi::String>().Utf8Value());
-        std::vector<char> signature = string_to_binary(info[1].As<Napi::String>().Utf8Value());
-        std::vector<char> publicKey = string_to_binary(info[2].As<Napi::String>().Utf8Value());
+        passport::util::secure_byte_vector challenge = string_to_binary(info[0].As<Napi::String>().Utf8Value());
+        passport::util::secure_byte_vector signature = string_to_binary(info[1].As<Napi::String>().Utf8Value());
+        passport::util::secure_byte_vector publicKey = string_to_binary(info[2].As<Napi::String>().Utf8Value());
 
         return Napi::Boolean::New(info.Env(), passport::verifySignature(challenge, signature, publicKey));
     } CATCH_EXCEPTIONS
@@ -212,7 +212,8 @@ Napi::Value readCredential(const Napi::CallbackInfo &info) {
         Napi::Env env = info.Env();
         std::u16string target_utf16 = info[0].As<Napi::String>().Utf16Value();
         std::wstring target(target_utf16.begin(), target_utf16.end());
-        std::wstring user, password;
+        std::wstring user;
+        secure_wstring password;
 
         if (credentials::read(target, user, password, info[1].As<Napi::Boolean>())) {
             Napi::Object obj = Napi::Object::New(env);
@@ -263,10 +264,10 @@ Napi::String generateRandom(const Napi::CallbackInfo &info) {
         std::mt19937 rng(dev());
         std::uniform_int_distribution<> dist(0, UCHAR_MAX);
 
-        std::vector<char> buffer;
+        passport::util::secure_byte_vector buffer;
         buffer.reserve(numChars);
         for (int i = 0; i < numChars; i++) {
-            buffer.push_back((char) dist(rng));
+            buffer.push_back((unsigned char) dist(rng));
         }
 
         return Napi::String::New(info.Env(), binary_to_string(buffer));
