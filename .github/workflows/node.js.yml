@@ -24,7 +24,14 @@ jobs:
       - run: npm run-script build
         continue-on-error: true
       - run: npm pack
+      - run: npm run-script create-lib
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
+          name: "passportLib"
+          path: passportLib
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v2
+        with:
+          name: "node-ms-passport"
           path: node-ms-passport-*.tgz

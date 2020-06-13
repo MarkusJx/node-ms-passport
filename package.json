@@ -1,6 +1,6 @@
 {
   "name": "node-ms-passport",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Microsoft passport for node js",
   "repository": "https://github.com/MarkusJx/node-ms-passport",
   "gypfile": true,
@@ -8,7 +8,9 @@
     "build": "cmake-js build --arch ia32 -d src --out build32 && cmake-js build --arch x64 -d src --out build64",
     "prebuild": "node prebuild.js",
     "postbuild": "node copy-deps.js copy",
-    "install": "node install.js"
+    "install": "node install.js",
+    "prepublish": "npm run-script build",
+    "create-lib": "node copy-deps.js create-lib"
   },
   "keywords": [],
   "author": "MarkusJx",

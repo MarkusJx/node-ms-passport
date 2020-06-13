@@ -36,16 +36,42 @@ describe('Passport test', function () {
 });
 
 describe('Credential manager test', function () {
-    it('Credential write', function () {
-        assert(credentials.write("test/test", "test", "testPassword"));
+    describe('with encryption', function () {
+        it('Credential write', function () {
+            assert(credentials.write("test/test", "test", "testPassword"));
+        });
+        it('Credential read', function () {
+            const read = credentials.read("test/test");
+            assert.notStrictEqual(read, null);
+            assert.strictEqual(read.username, "test");
+            assert.strictEqual(read.password, "testPassword");
+        });
+        it('Password encrypted check', function () {
+            const encrypted = credentials.isEncrypted("test/test");
+            assert(encrypted.ok);
+            assert.strictEqual(encrypted.encrypted, true);
+        });
+        it('Credential delete', function () {
+            assert(credentials.remove("test/test"));
+        });
     });
-    it('Credential read', function () {
-        const read = credentials.read("test/test");
-        assert.notStrictEqual(read, null);
-        assert.strictEqual(read.username, "test");
-        assert.strictEqual(read.password, "testPassword");
-    });
-    it('Credential delete', function () {
-        assert(credentials.remove("test/test"));
+    describe('without encryption', function() {
+        it('Credential write', function () {
+            assert(credentials.write("test/testRaw", "test", "testPassword", false));
+        });
+        it('Credential read', function () {
+            const read = credentials.read("test/testRaw", false);
+            assert.notStrictEqual(read, null);
+            assert.strictEqual(read.username, "test");
+            assert.strictEqual(read.password, "testPassword");
+        });
+        it('Password encrypted check', function () {
+            const encrypted = credentials.isEncrypted("test/testRaw");
+            assert(encrypted.ok);
+            assert.strictEqual(encrypted.encrypted, false);
+        });
+        it('Credential delete', function () {
+            assert(credentials.remove("test/testRaw"));
+        });
     });
 });
