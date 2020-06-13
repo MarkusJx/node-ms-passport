@@ -197,9 +197,11 @@ namespace nodeMsPassport {
 	 */
 	namespace credentials {
 		namespace util {
-			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring& password);
+			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring*& password);
 
 			NODEMSPASSPORT_EXPORT void freePcred(void* data);
+
+			NODEMSPASSPORT_EXPORT void deleteWstring(std::wstring* in);
 		}
 
 		/**
@@ -223,11 +225,15 @@ namespace nodeMsPassport {
 		inline bool read(const std::wstring& target, std::wstring& user, std::wstring& password) {
 			wchar_t* username;
 
-			void* pcred = util::read(target, username, password);
+			std::wstring* pass;
+			void* pcred = util::read(target, username, pass);
 			if (pcred == nullptr) {
 				return false;
 			}
 			else {
+				password = std::wstring(pass->begin(), pass->end());
+				util::deleteWstring(pass);
+
 				user = std::wstring(username);
 				util::freePcred(pcred);
 

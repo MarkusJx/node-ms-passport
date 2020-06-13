@@ -138,13 +138,66 @@ std::wstring copyToWChar(char* ptr, int sizeInBytes, bool& ok) {
 	std::wstring out;
 	out.resize(sizeInBytes / sizeof(wchar_t));
 
-	ok = memcpy_s((wchar_t*) out.data(), out.size() * sizeof(wchar_t), ptr, sizeInBytes) == 0;
+	ok = memcpy_s((wchar_t*)out.data(), out.size() * sizeof(wchar_t), ptr, sizeInBytes) == 0;
 	return out;
+}
+
+bool unprotectCredential(std::wstring& toUnprotect) {
+	CRED_PROTECTION_TYPE protectionType;
+	std::vector<wchar_t> toUnprotect_cpy(toUnprotect.begin(), toUnprotect.end());
+	if (CredIsProtectedW(toUnprotect_cpy.data(), &protectionType)) {
+		if (protectionType != CredUnprotected) {
+			toUnprotect_cpy = std::vector<wchar_t>(toUnprotect.begin(), toUnprotect.end());
+			DWORD unprotectedSize = 0;
+			if (!CredUnprotectW(false, toUnprotect_cpy.data(), (DWORD)toUnprotect_cpy.size(), nullptr, &unprotectedSize)) {
+				DWORD dwErr = GetLastError();
+				if (dwErr == ERROR_INSUFFICIENT_BUFFER && unprotectedSize > 0) {
+					std::vector<wchar_t> outData;
+					outData.resize(unprotectedSize);
+
+					if (CredUnprotectW(false, toUnprotect_cpy.data(), (DWORD)toUnprotect_cpy.size(), outData.data(), &unprotectedSize)) {
+						toUnprotect = std::wstring(outData.begin(), outData.end());
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
+}
+
+bool protectCredential(std::wstring& toProtect) {
+	CRED_PROTECTION_TYPE protectionType;
+	std::vector<wchar_t> toProtect_cpy(toProtect.begin(), toProtect.end());
+	if (CredIsProtectedW(toProtect_cpy.data(), &protectionType)) {
+		if (protectionType == CredUnprotected) {
+			toProtect_cpy = std::vector<wchar_t>(toProtect.begin(), toProtect.end());
+			DWORD protectedSize = 0;
+			if (!CredProtectW(false, toProtect_cpy.data(), (DWORD) toProtect_cpy.size(), nullptr, &protectedSize, nullptr)) {
+				DWORD dwErr = GetLastError();
+
+				if (dwErr == ERROR_INSUFFICIENT_BUFFER && protectedSize > 0) {
+					std::vector<wchar_t> outData;
+					outData.resize(protectedSize);
+
+					if (CredProtectW(false, toProtect_cpy.data(), (DWORD) toProtect_cpy.size(), outData.data(), &protectedSize, nullptr)) {
+						toProtect = std::wstring(outData.begin(), outData.end());
+						return true;
+					}
+				}
+			}
+		}
+	}
+
+	return false;
 }
 
 NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const std::wstring& password) {
 	bool ok;
-	std::vector<unsigned char> passData = copyToChar(password, ok);
+	std::wstring pass = password;
+	if (!protectCredential(pass)) return false;
+	std::vector<unsigned char> passData = copyToChar(pass, ok);
 	if (!ok) return false;
 
 	DWORD cbCreds = (DWORD)passData.size();
@@ -152,33 +205,46 @@ NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const 
 	CREDENTIALW cred = { 0 };
 	cred.Type = CRED_TYPE_GENERIC;
 
-	cred.TargetName = (LPWSTR)target.c_str();
+	// Copy target as a non-const qualified wchar array is required
+	std::vector<wchar_t> target_cpy(target.begin(), target.end());
+	cred.TargetName = target_cpy.data();
+
 	cred.CredentialBlobSize = cbCreds;
-	cred.CredentialBlob = (LPBYTE)passData.data();
+	cred.CredentialBlob = passData.data();
 	cred.Persist = CRED_PERSIST_LOCAL_MACHINE;
 
-	cred.UserName = (LPWSTR)user.c_str();
+	// Copy user as a non-const qualified wchar array is required
+	std::vector<wchar_t> user_cpy(user.begin(), user.end());
+	cred.UserName = user_cpy.data();
 
 	return ::CredWriteW(&cred, 0);
 }
 
-NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring& password) {
+NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring*& password) {
 	PCREDENTIALW pcred;
 
 	bool ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
 	if (!ok) return nullptr;
 
-	username = pcred->UserName;
-	char *credential = (char*)pcred->CredentialBlob;
-	int credSize = pcred->CredentialBlobSize;
+	std::wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
+	if (ok) {
+		ok = unprotectCredential(pass);
+		if (ok) {
+			username = pcred->UserName;
+			password = new std::wstring(pass.begin(), pass.end());
+		}
+	}
 
-	password = copyToWChar(credential, credSize, ok);
 	if (!ok) {
 		::CredFree(pcred);
 		return nullptr;
 	}
 
 	return pcred;
+}
+
+NODEMSPASSPORT_EXPORT void credentials::util::deleteWstring(std::wstring* in) {
+	delete in;
 }
 
 NODEMSPASSPORT_EXPORT void credentials::util::freePcred(void* data) {
