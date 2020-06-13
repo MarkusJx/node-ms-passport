@@ -1,5 +1,5 @@
 const assert = require("assert");
-const {passport, passport_utils, credentials} = require('./node-ms-passport');
+const {passport, passport_utils, credentials} = require('./index');
 
 describe('Passport test', function () {
     let createRes, publicKey, challenge, signed;
