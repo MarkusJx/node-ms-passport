@@ -260,3 +260,31 @@ NODEMSPASSPORT_EXPORT void credentials::util::freePcred(void* data) {
 NODEMSPASSPORT_EXPORT bool credentials::remove(const std::wstring& target) {
 	return ::CredDeleteW(target.c_str(), CRED_TYPE_GENERIC, 0);
 }
+
+NODEMSPASSPORT_EXPORT bool credentials::isEncrypted(const std::wstring& target, bool& ok) {
+	PCREDENTIALW pcred;
+
+	ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
+	if (!ok) return false;
+
+	std::wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
+	::CredFree(pcred);
+	if (!ok) {
+		return false;
+	}
+
+	CRED_PROTECTION_TYPE protectionType;
+	std::vector<wchar_t> pass_cpy(pass.begin(), pass.end());
+	ok = CredIsProtectedW(pass_cpy.data(), &protectionType);
+	if (ok) {
+		if (protectionType == CredUnprotected) {
+			return false;
+		}
+		else {
+			return true;
+		}
+	}
+	else {
+		return false;
+	}
+}

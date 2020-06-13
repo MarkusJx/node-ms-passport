@@ -210,6 +210,7 @@ namespace nodeMsPassport {
 		 * @param target the account id
 		 * @param user the user name to store
 		 * @param password the password to store
+		 * @param encrypt whether to encrypt the password
 		 * @return if the operation was successful
 		 */
 		NODEMSPASSPORT_EXPORT bool write(const std::wstring& target, const std::wstring& user, const std::wstring& password, bool encrypt);
@@ -220,6 +221,7 @@ namespace nodeMsPassport {
 		 * @param target the account id
 		 * @param user the user name
 		 * @param password the password
+		 * @param whether the password is encrypted
 		 * @return if the operation was successful
 		 */
 		inline bool read(const std::wstring& target, std::wstring& user, std::wstring& password, bool encrypt) {
@@ -248,5 +250,14 @@ namespace nodeMsPassport {
 		 * @return if the operation was successful
 		 */
 		NODEMSPASSPORT_EXPORT bool remove(const std::wstring& target);
+
+		/**
+		 * Check if a password entry is encrypted
+		 *
+		 * @param target the account id to check
+		 * @param ok if the operation was successful
+		 * @return if the password entry is encrypted
+		 */
+		NODEMSPASSPORT_EXPORT bool isEncrypted(const std::wstring& target, bool& ok);
 	}
 }
