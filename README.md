@@ -38,7 +38,9 @@ if (signature.status !== 0) {
 }
 
 // Verify the signature
-let signatureMatches = passport.verifySignature(challenge, signature.data, privateKey.data);
+let signatureMatches = passport.verifySignature(challenge, 
+                                                signature.data,
+                                                privateKey.data);
 if (signatureMatches) {
     // Do something with it...
 }
@@ -61,6 +63,7 @@ If the status is zero, everything was ok, 1 if a unknown error occurred, 2 if th
 
 ### Credential vault
 
+It also supports the windows credential vault. Passwords will be encrypted by default.
 Writing and reading credentials to and from the windows credential manager:
 ```js
 const {credentials} = require('node-ms-passport');
@@ -71,6 +74,15 @@ if (!successful) {
     // Do something with it...
 }
 
+// Maybe check if the data is encrypted, here the this would return true
+const encrypted = credentials.isEncrypted("test/test");
+// Check if the operation was successful
+if (!encrypted.ok) {
+    return;
+}
+
+// The result will be stored in encrypted.encrypted
+
 // Read credentials
 let result = credentials.read("test/test");
 // credentials.read() returns null if the operation failed
@@ -79,8 +91,8 @@ if (result == null) {
 }
 
 // Get the username and password
-let username = result.username:
-let password = result.password:
+let username = result.username;
+let password = result.password;
 
 // Use it
 console.log("Read username:", username, "and password:", password);
@@ -88,6 +100,26 @@ console.log("Read username:", username, "and password:", password);
 // Delete this credential
 successful = credentials.remove("test/test");
 if (!successful) {
-    // Do something with it, throw an error, get some ice cream to eat under the shower...
+    // Do something with it, throw an error, 
+    // get some ice cream to eat under the shower...
+}
+```
+
+Encryption can be turned off by passing ``false`` to the read and write methods:
+
+```js
+// Write credentials
+let successful = credentials.write("test/test", "test", "testPassword", false);
+if (!successful) {
+    // Do something with it...
+}
+
+// isEncrypted() check will return false
+
+// Read credentials
+let result = credentials.read("test/test", false);
+// credentials.read() returns null if the operation failed
+if (result == null) {
+    return;
 }
 ```

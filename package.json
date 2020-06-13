@@ -1,7 +1,7 @@
 {
   "name": "node-ms-passport",
-  "version": "0.0.2",
-  "description": "Microsoft passport for node js",
+  "version": "0.0.3",
+  "description": "Microsoft passport with windows hello and credential manager for node js",
   "repository": "https://github.com/MarkusJx/node-ms-passport",
   "gypfile": true,
   "scripts": {
@@ -9,7 +9,7 @@
     "prebuild": "node prebuild.js",
     "postbuild": "node copy-deps.js copy",
     "install": "node install.js",
-    "prepublish": "npm run-script build",
+    "prepare": "npm run-script build",
     "create-lib": "node copy-deps.js create-lib"
   },
   "keywords": [],

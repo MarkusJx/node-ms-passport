@@ -199,7 +199,7 @@ Napi::Boolean writeCredential(const Napi::CallbackInfo &info) {
 
         std::wstring target(target_u16.begin(), target_u16.end());
         std::wstring user(user_u16.begin(), user_u16.end());
-        std::wstring password(password_u16.begin(), password_u16.end());
+        secure_wstring password(password_u16.begin(), password_u16.end());
 
         return Napi::Boolean::New(info.Env(), credentials::write(target, user, password, info[3].As<Napi::Boolean>()));
     } CATCH_EXCEPTIONS
