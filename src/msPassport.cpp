@@ -103,6 +103,7 @@ std::string binary_to_string(const std::vector<char> &source) {
 Napi::Object convertToObject(const Napi::Env &env, const passport::OperationResult &res) {
     Napi::Object obj = Napi::Object::New(env);
     obj.Set("status", Napi::Number::New(env, res.status));
+    obj.Set("ok", Napi::Boolean::New(env, res.ok()));
     if (res.status == 0) {
         obj.Set("data", Napi::String::New(env, binary_to_string(res.data)));
     } else {
@@ -189,7 +190,7 @@ Napi::Boolean verifySignature(const Napi::CallbackInfo &info) {
 }
 
 Napi::Boolean writeCredential(const Napi::CallbackInfo &info) {
-    CHECK_ARGS(STRING, STRING, STRING);
+    CHECK_ARGS(STRING, STRING, STRING, BOOLEAN);
 
     try {
         std::u16string target_u16 = info[0].As<Napi::String>();
@@ -200,12 +201,12 @@ Napi::Boolean writeCredential(const Napi::CallbackInfo &info) {
         std::wstring user(user_u16.begin(), user_u16.end());
         std::wstring password(password_u16.begin(), password_u16.end());
 
-        return Napi::Boolean::New(info.Env(), credentials::write(target, user, password));
+        return Napi::Boolean::New(info.Env(), credentials::write(target, user, password, info[3].As<Napi::Boolean>()));
     } CATCH_EXCEPTIONS
 }
 
 Napi::Value readCredential(const Napi::CallbackInfo &info) {
-    CHECK_ARGS(STRING);
+    CHECK_ARGS(STRING, BOOLEAN);
 
     try {
         Napi::Env env = info.Env();
@@ -213,7 +214,7 @@ Napi::Value readCredential(const Napi::CallbackInfo &info) {
         std::wstring target(target_utf16.begin(), target_utf16.end());
         std::wstring user, password;
 
-        if (credentials::read(target, user, password)) {
+        if (credentials::read(target, user, password, info[1].As<Napi::Boolean>())) {
             Napi::Object obj = Napi::Object::New(env);
 
             obj.Set("username", Napi::String::New(env, std::u16string(user.begin(), user.end())));
@@ -232,6 +233,23 @@ Napi::Boolean removeCredential(const Napi::CallbackInfo &info) {
         std::u16string target = info[0].As<Napi::String>();
 
         return Napi::Boolean::New(info.Env(), credentials::remove(std::wstring(target.begin(), target.end())));
+    } CATCH_EXCEPTIONS
+}
+
+Napi::Object credentialEncrypted(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING);
+
+    try {
+        Napi::Env env = info.Env();
+        std::u16string target = info[0].As<Napi::String>();
+
+        bool ok;
+        bool res = credentials::isEncrypted(std::wstring(target.begin(), target.end()), ok);
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("ok", Napi::Boolean::New(env, ok));
+        obj.Set("encrypted", Napi::Boolean::New(env, res));
+
+        return obj;
     } CATCH_EXCEPTIONS
 }
 
@@ -267,6 +285,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     exports.Set(EXPORT(writeCredential));
     exports.Set(EXPORT(readCredential));
     exports.Set(EXPORT(removeCredential));
+    exports.Set(EXPORT(credentialEncrypted));
 
     exports.Set(EXPORT(generateRandom));
 

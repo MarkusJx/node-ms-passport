@@ -31,8 +31,8 @@ module.exports = {
          * Create a microsoft passport key
          *
          * @param accountId {string} the account id to add
-         * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
-         *         data will contain the public key as hex string
+         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
+         *          If so, data will contain the public key as hex string
          */
         createPassportKey: function (accountId) {
             return passport_native.js_createPassportKey(accountId);
@@ -42,8 +42,8 @@ module.exports = {
          *
          * @param accountId {string} the account id
          * @param challenge {string} the challenge to sign
-         * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
-         *         data will contain the signature as hex string
+         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
+         *         If so, data will contain the signature as hex string
          */
         passportSign: function (accountId, challenge) {
             return passport_native.js_passportSign(accountId, challenge);
@@ -62,8 +62,8 @@ module.exports = {
          * Get the public key
          *
          * @param accountId {string} the account id for the public key to get
-         * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
-         *         data will contain the public key as hex string
+         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
+         *         If so, data will contain the public key as hex string
          */
         getPublicKey: function (accountId) {
             return passport_native.js_getPublicKey(accountId);
@@ -72,8 +72,8 @@ module.exports = {
          * Get a SHA-256 hash of the public key
          *
          * @param accountId {string} the account id for the public key to get
-         * @return {{status: number, data: string | null}} the status, equals to 0 if everything is ok. If so,
-         *         data will contain the public key hash as hex string
+         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
+         *         If so, data will contain the public key hash as hex string
          */
         getPublicKeyHash: function (accountId) {
             return passport_native.js_getPublicKeyHash(accountId);
@@ -100,19 +100,21 @@ module.exports = {
          * @param {string} target the account id
          * @param {string} user the user name to store
          * @param {string} password the password to store
+         * @param {boolean} encrypt whether to encrypt the password
          * @return {boolean} if the operation was successful
          */
-        write: function (target, user, password) {
-            return passport_native.js_writeCredential(target, user, password);
+        write: function (target, user, password, encrypt = true) {
+            return passport_native.js_writeCredential(target, user, password, encrypt);
         },
         /**
          * Read data from the password storage
          *
          * @param target {string} the account id
+         * @param {boolean} encrypt whether the password is encrypted
          * @return {{username: string, password: string} | null} the username and password or null if unsuccessful
          */
-        read: function (target) {
-            return passport_native.js_readCredential(target);
+        read: function (target, encrypt = true) {
+            return passport_native.js_readCredential(target, encrypt);
         },
         /**
          * Remove a entry from the credential storage
@@ -122,6 +124,15 @@ module.exports = {
          */
         remove(target) {
             return passport_native.js_removeCredential(target);
+        },
+        /**
+         * Check if a password entry is encrypted
+         *
+         * @param target {string} the account id to check
+         * @return {{ok: boolean, encrypted: boolean}} if the operation was successful and if the password is encrypted
+         */
+        isEncrypted: function(target) {
+            return passport_native.js_credentialEncrypted(target);
         }
     },
     /**
