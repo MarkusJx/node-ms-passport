@@ -23,14 +23,129 @@
 #   define NODEMSPASSPORT_NODISCARD
 #endif
 
+#undef max
+
 /**
  * The dotNetBridge namespace
  */
 namespace nodeMsPassport {
+	namespace util {
+		/**
+		 * zallocator struct
+		 * Source: https://wiki.openssl.org/index.php/EVP_Symmetric_Encryption_and_Decryption
+		 * with additions from: https://stackoverflow.com/a/53207813
+		 */
+		template<typename T>
+		struct zallocator {
+		public:
+			typedef T value_type;
+			typedef value_type* pointer;
+			typedef const value_type* const_pointer;
+			typedef value_type& reference;
+			typedef const value_type& const_reference;
+			typedef std::size_t size_type;
+			typedef std::ptrdiff_t difference_type;
+
+			constexpr zallocator() noexcept = default;
+
+			template<class U>
+			constexpr zallocator(const zallocator<U>& other) noexcept {}
+
+			pointer address(reference v) const { return &v; }
+
+			const_pointer address(const_reference v) const { return &v; }
+
+			pointer allocate(size_type n, const void* hint = 0) {
+				if (n > std::numeric_limits<size_type>::max() / sizeof(T))
+					throw std::bad_alloc();
+				return static_cast<pointer> (::operator new(n * sizeof(value_type)));
+			}
+
+			void deallocate(pointer p, size_type n) {
+				std::fill_n((volatile char*)p, n * sizeof(T), 0);
+				::operator delete(p);
+			}
+
+			[[nodiscard]] size_type max_size() const {
+				return std::numeric_limits<size_type>::max() / sizeof(T);
+			}
+
+			template<typename U>
+			struct rebind {
+				typedef zallocator<U> other;
+			};
+
+			void construct(pointer ptr, const T& val) {
+				new(static_cast<T*>(ptr)) T(val);
+			}
+
+			void destroy(pointer ptr) {
+				static_cast<T*>(ptr)->~T();
+			}
+
+			template<typename U>
+			friend bool operator==(const zallocator<T>& a, const zallocator<U>& b) {
+				return true;
+			}
+
+			template<typename U>
+			friend bool operator!=(const zallocator<T>& a, const zallocator<U>& b) {
+				return false;
+			}
+
+#   if __cpluplus >= 201103L
+			template<typename U, typename... Args>
+			void construct(U* ptr, Args&&  ... args) {
+				::new (static_cast<void*> (ptr)) U(std::forward<Args>(args)...);
+			}
+
+			template<typename U>
+			void destroy(U* ptr) {
+				ptr->~U();
+			}
+#   endif
+		};
+
+		template<class T>
+		using basic_secure_vector = std::vector<T, zallocator<T>>;
+		using basic_secure_wstring = std::basic_string<wchar_t, std::char_traits<wchar_t>, zallocator<wchar_t>>;
+	}
+
+	template<typename T>
+	class secure_vector : public util::basic_secure_vector<T> {
+	public:
+		using util::basic_secure_vector<T>::basic_secure_vector;
+
+		secure_vector(const std::vector<T>& vec) : util::basic_secure_vector<T>(vec.begin(), vec.end()) {}
+
+		NODEMSPASSPORT_NODISCARD std::vector<T> to_vector() const {
+			return std::vector<T>(this->begin(), this->end());
+		}
+	};
+
+	class secure_wstring : public util::basic_secure_wstring {
+	public:
+		using util::basic_secure_wstring::basic_secure_wstring;
+
+		secure_wstring(const std::wstring& str) : util::basic_secure_wstring(str.begin(), str.end()) {}
+
+		NODEMSPASSPORT_NODISCARD std::wstring to_wstring() const {
+			return std::wstring(this->begin(), this->end());
+		}
+	};
+
 	/**
 	 * A namespace for MS passport operations
 	 */
 	namespace passport {
+		/**
+		 * Utility namespace
+		 */
+		namespace util {
+			using byte = unsigned char;
+			using secure_byte_vector = ::nodeMsPassport::secure_vector<byte>;
+		}
+
 		/**
 		 * The unmanaged namespace. Functions in here should not be used.
 		 */
@@ -39,13 +154,13 @@ namespace nodeMsPassport {
 
 			NODEMSPASSPORT_EXPORT char* createPassportKey(int& status, int& outSize, const char* accountId);
 
-			NODEMSPASSPORT_EXPORT char* passportSign(int& status, int& outSize, const char* accountId, const char* challenge, int challengeSize);
+			NODEMSPASSPORT_EXPORT char* passportSign(int& status, int& outSize, const char* accountId, const util::byte* challenge, int challengeSize);
 
 			NODEMSPASSPORT_EXPORT char* getPublicKey(int& status, int& outSize, const char* accountId);
 
 			NODEMSPASSPORT_EXPORT char* getPublicKeyHash(int& status, int& outSize, const char* accountId);
 
-			NODEMSPASSPORT_EXPORT bool verifyChallenge(const char* challenge, int challengeSize, const char* signature, int signatureSize, const char* publicKey, int publicKeySize);
+			NODEMSPASSPORT_EXPORT bool verifyChallenge(const util::byte* challenge, int challengeSize, const util::byte* signature, int signatureSize, const util::byte* publicKey, int publicKeySize);
 
 			NODEMSPASSPORT_EXPORT int deletePassportAccount(const char* accountId);
 		}
@@ -58,7 +173,7 @@ namespace nodeMsPassport {
 			/**
 			 * The OperationResult constructor
 			 */
-			OperationResult(std::vector<char> d, int s) : data(std::move(d)), status(s) {}
+			OperationResult(util::secure_byte_vector d, int s) : data(std::move(d)), status(s) {}
 
 			/**
 			 * Check if the status is ok
@@ -72,7 +187,7 @@ namespace nodeMsPassport {
 			/**
 			 * The data returned by the operation
 			 */
-			const std::vector<char> data;
+			const util::secure_byte_vector data;
 
 			/**
 			 * The status of the operation. If the operation was successful, the status equals to zero
@@ -97,7 +212,7 @@ namespace nodeMsPassport {
 			int status, size = 0;
 			char* data = unmanaged::createPassportKey(status, size, accountId.c_str());
 
-			std::vector<char> dt;
+			util::secure_byte_vector dt;
 			if (status == 0) {
 				dt.resize(size);
 				memcpy(dt.data(), data, size);
@@ -114,11 +229,11 @@ namespace nodeMsPassport {
 		 * @param challenge the challenge to sign
 		 * @return the result of the operation
 		 */
-		inline OperationResult passportSign(const std::string& accountId, const std::vector<char>& challenge) {
+		inline OperationResult passportSign(const std::string& accountId, const util::secure_byte_vector& challenge) {
 			int status, size = 0;
 			char* data = unmanaged::passportSign(status, size, accountId.c_str(), challenge.data(), (int)challenge.size());
 
-			std::vector<char> dt;
+			util::secure_byte_vector dt;
 			if (status == 0) {
 				dt.resize(size);
 				memcpy(dt.data(), data, size);
@@ -138,7 +253,7 @@ namespace nodeMsPassport {
 			int status, size = 0;
 			char* data = unmanaged::getPublicKey(status, size, accountId.c_str());
 
-			std::vector<char> dt;
+			util::secure_byte_vector dt;
 			if (status == 0) {
 				dt.resize(size);
 				memcpy(dt.data(), data, size);
@@ -158,7 +273,7 @@ namespace nodeMsPassport {
 			int status, size = 0;
 			char* data = unmanaged::getPublicKeyHash(status, size, accountId.c_str());
 
-			std::vector<char> dt;
+			util::secure_byte_vector dt;
 			if (status == 0) {
 				dt.resize(size);
 				memcpy(dt.data(), data, size);
@@ -176,7 +291,7 @@ namespace nodeMsPassport {
 		 * @param the public key of the user
 		 * @return if the signature matched
 		 */
-		inline bool verifySignature(const std::vector<char>& challenge, const std::vector<char>& signature, const std::vector<char>& publicKey) {
+		inline bool verifySignature(const util::secure_byte_vector& challenge, const util::secure_byte_vector& signature, const util::secure_byte_vector& publicKey) {
 			return unmanaged::verifyChallenge(challenge.data(), (int)challenge.size(), signature.data(), (int)signature.size(), publicKey.data(), (int)publicKey.size());
 		}
 
@@ -197,11 +312,11 @@ namespace nodeMsPassport {
 	 */
 	namespace credentials {
 		namespace util {
-			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, std::wstring*& password, bool encrypt);
+			NODEMSPASSPORT_EXPORT void* read(const std::wstring& target, wchar_t*& username, secure_wstring*& password, bool encrypt);
 
 			NODEMSPASSPORT_EXPORT void freePcred(void* data);
 
-			NODEMSPASSPORT_EXPORT void deleteWstring(std::wstring* in);
+			NODEMSPASSPORT_EXPORT void deleteWstring(secure_wstring* in);
 		}
 
 		/**
@@ -213,7 +328,7 @@ namespace nodeMsPassport {
 		 * @param encrypt whether to encrypt the password
 		 * @return if the operation was successful
 		 */
-		NODEMSPASSPORT_EXPORT bool write(const std::wstring& target, const std::wstring& user, const std::wstring& password, bool encrypt);
+		NODEMSPASSPORT_EXPORT bool write(const std::wstring& target, const std::wstring& user, const secure_wstring& password, bool encrypt);
 
 		/**
 		 * Read data from the password storage
@@ -224,16 +339,16 @@ namespace nodeMsPassport {
 		 * @param whether the password is encrypted
 		 * @return if the operation was successful
 		 */
-		inline bool read(const std::wstring& target, std::wstring& user, std::wstring& password, bool encrypt) {
+		inline bool read(const std::wstring& target, std::wstring& user, secure_wstring& password, bool encrypt) {
 			wchar_t* username;
 
-			std::wstring* pass;
+			secure_wstring* pass;
 			void* pcred = util::read(target, username, pass, encrypt);
 			if (pcred == nullptr) {
 				return false;
 			}
 			else {
-				password = std::wstring(pass->begin(), pass->end());
+				password = secure_wstring(pass->begin(), pass->end());
 				util::deleteWstring(pass);
 
 				user = std::wstring(username);

@@ -48,7 +48,7 @@ char* byteArrayToChar(array<unsigned char>^ data) {
 	return out;
 }
 
-array<unsigned char>^ charToByteArray(const char* data, int len) {
+array<unsigned char>^ charToByteArray(const unsigned char* data, int len) {
 	array<unsigned char>^ out = gcnew array<unsigned char>(len);
 	for (int i = 0; i < len; i++) {
 		out[i] = data[i];
@@ -78,7 +78,7 @@ NODEMSPASSPORT_EXPORT char* passport::unmanaged::createPassportKey(int& status, 
 	}
 }
 
-NODEMSPASSPORT_EXPORT char* passport::unmanaged::passportSign(int& status, int& outSize, const char* accountId, const char* challenge, int challengeSize) {
+NODEMSPASSPORT_EXPORT char* passport::unmanaged::passportSign(int& status, int& outSize, const char* accountId, const util::byte* challenge, int challengeSize) {
 	CSNodeMsPassport::Passport::PassportResult res = CSNodeMsPassport::Passport::PassportSign(CharToString(accountId), charToByteArray(challenge, challengeSize));
 	status = res.status;
 
@@ -117,7 +117,7 @@ NODEMSPASSPORT_EXPORT char* passport::unmanaged::getPublicKeyHash(int& status, i
 	}
 }
 
-NODEMSPASSPORT_EXPORT bool passport::unmanaged::verifyChallenge(const char* challenge, int challengeSize, const char* signature, int signatureSize, const char* publicKey, int publicKeySize) {
+NODEMSPASSPORT_EXPORT bool passport::unmanaged::verifyChallenge(const util::byte* challenge, int challengeSize, const util::byte* signature, int signatureSize, const util::byte* publicKey, int publicKeySize) {
 	return CSNodeMsPassport::Passport::VerifyChallenge(charToByteArray(challenge, challengeSize), charToByteArray(signature, signatureSize), charToByteArray(publicKey, publicKeySize));
 }
 
@@ -125,8 +125,8 @@ NODEMSPASSPORT_EXPORT int passport::unmanaged::deletePassportAccount(const char*
 	return CSNodeMsPassport::Passport::DeletePassportAccount(CharToString(accountId));
 }
 
-std::vector<unsigned char> copyToChar(const std::wstring& data, bool& ok) {
-	std::vector<unsigned char> tmp;
+secure_vector<unsigned char> copyToChar(const secure_wstring& data, bool& ok) {
+	secure_vector<unsigned char> tmp;
 	tmp.resize(data.size() * sizeof(wchar_t));
 
 	ok = memcpy_s(tmp.data(), tmp.size(), data.c_str(), data.size() * sizeof(wchar_t)) == 0;
@@ -134,29 +134,30 @@ std::vector<unsigned char> copyToChar(const std::wstring& data, bool& ok) {
 	return tmp;
 }
 
-std::wstring copyToWChar(char* ptr, int sizeInBytes, bool& ok) {
-	std::wstring out;
+secure_wstring copyToWChar(char* ptr, int sizeInBytes, bool& ok) {
+	secure_wstring out;
 	out.resize(sizeInBytes / sizeof(wchar_t));
 
 	ok = memcpy_s((wchar_t*)out.data(), out.size() * sizeof(wchar_t), ptr, sizeInBytes) == 0;
 	return out;
 }
 
-bool unprotectCredential(std::wstring& toUnprotect) {
+// Source: https://github.com/microsoft/Windows-classic-samples/blob/master/Samples/CredentialProvider/cpp/helpers.cpp#L456
+bool unprotectCredential(secure_wstring& toUnprotect) {
 	CRED_PROTECTION_TYPE protectionType;
-	std::vector<wchar_t> toUnprotect_cpy(toUnprotect.begin(), toUnprotect.end());
+	secure_vector<wchar_t> toUnprotect_cpy(toUnprotect.begin(), toUnprotect.end());
 	if (CredIsProtectedW(toUnprotect_cpy.data(), &protectionType)) {
 		if (protectionType != CredUnprotected) {
-			toUnprotect_cpy = std::vector<wchar_t>(toUnprotect.begin(), toUnprotect.end());
+			toUnprotect_cpy = secure_vector<wchar_t>(toUnprotect.begin(), toUnprotect.end());
 			DWORD unprotectedSize = 0;
 			if (!CredUnprotectW(false, toUnprotect_cpy.data(), (DWORD)toUnprotect_cpy.size(), nullptr, &unprotectedSize)) {
 				DWORD dwErr = GetLastError();
 				if (dwErr == ERROR_INSUFFICIENT_BUFFER && unprotectedSize > 0) {
-					std::vector<wchar_t> outData;
+					secure_vector<wchar_t> outData;
 					outData.resize(unprotectedSize);
 
 					if (CredUnprotectW(false, toUnprotect_cpy.data(), (DWORD)toUnprotect_cpy.size(), outData.data(), &unprotectedSize)) {
-						toUnprotect = std::wstring(outData.begin(), outData.end());
+						toUnprotect = secure_wstring(outData.begin(), outData.end());
 						return true;
 					}
 				}
@@ -167,22 +168,22 @@ bool unprotectCredential(std::wstring& toUnprotect) {
 	return false;
 }
 
-bool protectCredential(std::wstring& toProtect) {
+bool protectCredential(secure_wstring& toProtect) {
 	CRED_PROTECTION_TYPE protectionType;
-	std::vector<wchar_t> toProtect_cpy(toProtect.begin(), toProtect.end());
+	secure_vector<wchar_t> toProtect_cpy(toProtect.begin(), toProtect.end());
 	if (CredIsProtectedW(toProtect_cpy.data(), &protectionType)) {
 		if (protectionType == CredUnprotected) {
-			toProtect_cpy = std::vector<wchar_t>(toProtect.begin(), toProtect.end());
+			toProtect_cpy = secure_vector<wchar_t>(toProtect.begin(), toProtect.end());
 			DWORD protectedSize = 0;
 			if (!CredProtectW(false, toProtect_cpy.data(), (DWORD)toProtect_cpy.size(), nullptr, &protectedSize, nullptr)) {
 				DWORD dwErr = GetLastError();
 
 				if (dwErr == ERROR_INSUFFICIENT_BUFFER && protectedSize > 0) {
-					std::vector<wchar_t> outData;
+					secure_vector<wchar_t> outData;
 					outData.resize(protectedSize);
 
 					if (CredProtectW(false, toProtect_cpy.data(), (DWORD)toProtect_cpy.size(), outData.data(), &protectedSize, nullptr)) {
-						toProtect = std::wstring(outData.begin(), outData.end());
+						toProtect = secure_wstring(outData.begin(), outData.end());
 						return true;
 					}
 				}
@@ -193,14 +194,14 @@ bool protectCredential(std::wstring& toProtect) {
 	return false;
 }
 
-NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const std::wstring& password, bool encrypt) {
+NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const std::wstring& user, const secure_wstring& password, bool encrypt) {
 	bool ok;
-	std::wstring pass = password;
+	secure_wstring pass = password;
 	if (encrypt) {
 		if (!protectCredential(pass)) return false;
 	}
 
-	std::vector<unsigned char> passData = copyToChar(pass, ok);
+	secure_vector<unsigned char> passData = copyToChar(pass, ok);
 	if (!ok) return false;
 
 	DWORD cbCreds = (DWORD)passData.size();
@@ -223,13 +224,13 @@ NODEMSPASSPORT_EXPORT bool credentials::write(const std::wstring& target, const 
 	return ::CredWriteW(&cred, 0);
 }
 
-NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, std::wstring*& password, bool encrypt) {
+NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, wchar_t*& username, secure_wstring*& password, bool encrypt) {
 	PCREDENTIALW pcred;
 
 	bool ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
 	if (!ok) return nullptr;
 
-	std::wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
+	secure_wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
 	if (ok) {
 		if (encrypt) {
 			ok = unprotectCredential(pass);
@@ -237,7 +238,7 @@ NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, 
 
 		if (ok) {
 			username = pcred->UserName;
-			password = new std::wstring(pass.begin(), pass.end());
+			password = new secure_wstring(pass.begin(), pass.end());
 		}
 	}
 
@@ -249,7 +250,7 @@ NODEMSPASSPORT_EXPORT void* credentials::util::read(const std::wstring& target, 
 	return pcred;
 }
 
-NODEMSPASSPORT_EXPORT void credentials::util::deleteWstring(std::wstring* in) {
+NODEMSPASSPORT_EXPORT void credentials::util::deleteWstring(secure_wstring* in) {
 	delete in;
 }
 
@@ -267,14 +268,14 @@ NODEMSPASSPORT_EXPORT bool credentials::isEncrypted(const std::wstring& target, 
 	ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
 	if (!ok) return false;
 
-	std::wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
+	secure_wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
 	::CredFree(pcred);
 	if (!ok) {
 		return false;
 	}
 
 	CRED_PROTECTION_TYPE protectionType;
-	std::vector<wchar_t> pass_cpy(pass.begin(), pass.end());
+	secure_vector<wchar_t> pass_cpy(pass.begin(), pass.end());
 	ok = CredIsProtectedW(pass_cpy.data(), &protectionType);
 	if (ok) {
 		if (protectionType == CredUnprotected) {
