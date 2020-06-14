@@ -5,3 +5,5 @@
 /build64/
 /build32/
 /passportLib/
+/copy-deps.js
+/binding.gyp

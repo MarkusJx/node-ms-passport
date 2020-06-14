@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
-  <Product Id="*" Name="CSNodeMsPassportSetup" Language="1033" Version="1.0.0.0" Manufacturer="MarkusJx" UpgradeCode="30791381-d1fb-4397-96f8-345e6484fd9a">
+  <Product Id="*" Name="CSNodeMsPassport Setup" Language="1033" Version="1.0.0.0" Manufacturer="MarkusJx" UpgradeCode="30791381-d1fb-4397-96f8-345e6484fd9a">
     <Package InstallerVersion="200" Compressed="yes" InstallScope="perMachine" />
 
     <MajorUpgrade DowngradeErrorMessage="A newer version of [ProductName] is already installed." />
-    <MediaTemplate />
+    <MediaTemplate EmbedCab="yes"/>
 
     <Feature Id="ProductFeature" Title="Setup" Level="1">
       <ComponentGroupRef Id="ProductComponents" />
