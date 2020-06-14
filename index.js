@@ -35,7 +35,7 @@ if (process.platform !== 'win32') {
     }
 }
 
-const passport_native = require('./passport/' + ((process.arch === 'x64') ? 'x64' : 'x86') + '/passport.node');
+const passport_native = require('./passport/' + ((process.arch === 'x64') ? 'x64' : 'x86') + '/bin/passport.node');
 
 module.exports = {
     /**
@@ -157,7 +157,7 @@ module.exports = {
          * @param target {string} the account id to check
          * @return {{ok: boolean, encrypted: boolean}} if the operation was successful and if the password is encrypted
          */
-        isEncrypted: function(target) {
+        isEncrypted: function (target) {
             return passport_native.js_credentialEncrypted(target);
         }
     },
@@ -174,5 +174,23 @@ module.exports = {
         generateRandom: function (length) {
             return passport_native.js_generateRandom(length);
         }
-    }
+    },
+    /**
+     * Passport C++ library variables
+     */
+    passport_lib: {
+        library_dir32: __dirname + "\\passport\\x86\\lib",
+        library_dir64: __dirname + "\\passport\\x64\\lib",
+        library_dir: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\lib",
+        library32: __dirname + "\\passport\\x86\\lib\\NodeMsPassport.lib",
+        library64: __dirname + "\\passport\\x64\\lib\\NodeMsPassport.lib",
+        binary_dir32: __dirname + "\\passport\\x86\\bin",
+        binary_dir64: __dirname + "\\passport\\x64\\bin",
+        binary_dir: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\bin",
+        binary32: __dirname + "\\passport\\x86\\bin\\NodeMsPassport.dll",
+        binary64: __dirname + "\\passport\\x64\\bin\\NodeMsPassport.dll"
+    },
+    include: __dirname + "\\passport\\include",
+    library: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\lib\\NodeMsPassport.lib",
+    binary: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\bin\\NodeMsPassport.dll"
 }

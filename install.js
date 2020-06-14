@@ -3,10 +3,10 @@ const { exec } = require('child_process');
 let platform;
 if (process.arch === 'x64') {
     console.log("Installing 64 bit CSNodeMsPassport.dll to global assembly cache");
-    platform = 'x64';
+    platform = 'x64\\bin';
 } else {
     console.log("Installing 32 bit CSNodeMsPassport.dll to global assembly cache");
-    platform = 'x86';
+    platform = 'x86\\bin';
 }
 
 exec("CSNodeMsPassport.msi", {cwd: "passport\\" + platform}, (error, stdout, stderr) => {

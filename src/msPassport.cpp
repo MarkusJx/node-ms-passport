@@ -1,7 +1,7 @@
 #include <napi.h>
 #include <sstream>
 #include <random>
-#include <NodeMsPassport.h>
+#include <NodeMsPassport.hpp>
 
 #define CHECK_ARGS(...) ::util::checkArgs(info, ::util::removeNamespace(__FUNCTION__), {__VA_ARGS__})
 /*#define CHECK_INDEX(index, size) if (index < 0) throw Napi::RangeError::New(env, "Negative index requested"); \

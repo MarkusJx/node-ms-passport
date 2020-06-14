@@ -11,7 +11,7 @@
 #pragma comment(lib, "comsuppw.lib")
 
 #define NODEMSPASSPORT_EXPORTS
-#include "NodeMsPassport.h"
+#include "NodeMsPassport.hpp"
 
 using namespace System;
 using namespace System::Reflection;

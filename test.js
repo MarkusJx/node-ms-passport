@@ -1,6 +1,7 @@
 const assert = require("assert");
 const {passport, passport_utils, credentials} = require('./index');
 
+
 describe('Passport test', function () {
     let createRes, publicKey, challenge, signed;
     it('Checking if passport is available', () => {
@@ -39,6 +40,7 @@ describe('Credential manager test', function () {
     describe('with encryption', function () {
         it('Credential write', function () {
             assert(credentials.write("test/test", "test", "testPassword"));
+            console.log(require("./index").library);
         });
         it('Credential read', function () {
             const read = credentials.read("test/test");

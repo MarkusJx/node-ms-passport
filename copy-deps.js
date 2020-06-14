@@ -18,64 +18,7 @@ const deleteFolderRecursive = function (path) {
 };
 
 if (process.argv[2] === "copy") {
-    if (!fs.existsSync(base_dir)) {
-        console.log("Creating directory:", base_dir);
-        fs.mkdirSync(base_dir);
-    } else {
-        console.log(base_dir, "already exists, deleting it");
-        deleteFolderRecursive(base_dir);
-        console.log("Creating directory:", base_dir);
-        fs.mkdirSync(base_dir);
-    }
-
-    let dir32 = base_dir + "/x86";
-    let dir64 = base_dir + "/x64";
-
-    if (!fs.existsSync(dir32)) {
-        console.log("Creating directory:", dir32);
-        fs.mkdirSync(dir32);
-    }
-
-    if (!fs.existsSync(dir64)) {
-        console.log("Creating directory:", dir64);
-        fs.mkdirSync(dir64);
-    }
-
-    console.log("Copying deps to:", base_dir);
-
-    let csNative, csNative_out, dotNetBridge, dotNetBridge_out;
-    //csNative = "NodeMsPassport/x64/Release/CSNodeMsPassport.dll";
-    dotNetBridge = "NodeMsPassport/x64/Release/NodeMsPassport.dll";
-
-    //csNative_out = dir64 + "/CSNodeMsPassport.dll";
-    dotNetBridge_out = dir64 + "/NodeMsPassport.dll";
-
-    fs.copyFileSync(dotNetBridge, dotNetBridge_out);
-    //fs.copyFileSync(csNative, csNative_out);
-
-    //csNative = "NodeMsPassport/Release/CSNodeMsPassport.dll";
-    dotNetBridge = "NodeMsPassport/Release/NodeMsPassport.dll";
-
-    //csNative_out = dir32 + "/CSNodeMsPassport.dll";
-    dotNetBridge_out = dir32 + "/NodeMsPassport.dll";
-
-    fs.copyFileSync(dotNetBridge, dotNetBridge_out);
-    //fs.copyFileSync(csNative, csNative_out);
-    //fs.copyFileSync("NodeMsPassport/GacInstaller/bin/Release/GacInstaller.exe", base_dir + "/GacInstaller.exe");
-    fs.copyFileSync("NodeMsPassport/Setup/bin/Release/CSNodeMsPassport.msi", dir32 + "/CSNodeMsPassport.msi");
-    fs.copyFileSync("NodeMsPassport/Setup/bin/x64/Release/CSNodeMsPassport.msi", dir64 + "/CSNodeMsPassport.msi");
-
-    fs.copyFileSync("build32/Release/passport.node", dir32 + "/passport.node");
-    fs.copyFileSync("build64/Release/passport.node", dir64 + "/passport.node");
-} else if (process.argv[2] === "clean") {
-    if (fs.existsSync(dir)) {
-        console.log("Deleting directory:", dir);
-        deleteFolderRecursive(dir);
-    } else {
-        console.warn("Could not delete directory:", dir, "as it doesn't exist");
-    }
-} else if (process.argv[2] === "create-lib") {
-    const bin_dir = "passportLib";
+    const bin_dir = base_dir;
 
     if (!fs.existsSync(bin_dir)) {
         console.log("Creating directory:", bin_dir);
@@ -153,7 +96,6 @@ if (process.argv[2] === "copy") {
 
     fs.copyFileSync(dotNetBridge, dotNetBridge_out);
     fs.copyFileSync(csNative, csNative_out);
-    //fs.copyFileSync("NodeMsPassport/GacInstaller/bin/Release/GacInstaller.exe", base_dir + "/GacInstaller.exe");
 
     fs.copyFileSync("NodeMsPassport/Setup/bin/Release/CSNodeMsPassport.msi", dir32 + "/CSNodeMsPassport.msi");
     fs.copyFileSync("NodeMsPassport/Setup/bin/x64/Release/CSNodeMsPassport.msi", dir64 + "/CSNodeMsPassport.msi");
@@ -161,7 +103,10 @@ if (process.argv[2] === "copy") {
     fs.copyFileSync("NodeMsPassport/x64/Release/NodeMsPassport.lib", lib_dir64 + "/NodeMsPassport.lib");
     fs.copyFileSync("NodeMsPassport/Release/NodeMsPassport.lib", lib_dir32 + "/NodeMsPassport.lib")
 
-    fs.copyFileSync("NodeMsPassport/NodeMsPassport/NodeMsPassport.h", include_dir + "/NodeMsPassport.h");
+    fs.copyFileSync("NodeMsPassport/NodeMsPassport/NodeMsPassport.hpp", include_dir + "/NodeMsPassport.hpp");
+
+    fs.copyFileSync("build32/Release/passport.node", dir32 + "/passport.node");
+    fs.copyFileSync("build64/Release/passport.node", dir64 + "/passport.node");
 } else {
     throw new TypeError("Unknown command: " + process.argv[2]);
 }

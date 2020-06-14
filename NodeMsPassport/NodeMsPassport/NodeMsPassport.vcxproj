@@ -120,7 +120,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="NodeMsPassport.h" />
+    <ClInclude Include="NodeMsPassport.hpp" />
     <ClInclude Include="pch.h" />
     <ClInclude Include="Resource.h" />
   </ItemGroup>
