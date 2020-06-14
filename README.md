@@ -131,6 +131,8 @@ and [CredUnprotectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/
 supported.
 
 ```js
+const {passwords} = require('node-ms-passport');
+
 // Encrypt a password
 let data = passwords.encrypt("TestPassword");
 // Returns null on failure
