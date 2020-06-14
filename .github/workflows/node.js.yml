@@ -22,14 +22,13 @@ jobs:
         uses: microsoft/setup-msbuild@v1
       - run: npm install --ignore-scripts
       - run: npm run-script build
-        continue-on-error: true
       - run: npm pack
       - run: npm run-script create-lib
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
           name: "passportLib"
-          path: passportLib
+          path: passport
       - name: Upload Artifact
         uses: actions/upload-artifact@v2
         with:
