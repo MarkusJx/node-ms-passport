@@ -114,9 +114,9 @@ namespace nodeMsPassport {
 	template<typename T>
 	class secure_vector : public util::basic_secure_vector<T> {
 	public:
-        using util::basic_secure_vector<T>::basic_secure_vector;
+		using util::basic_secure_vector<T>::basic_secure_vector;
 
-	    secure_vector() : util::basic_secure_vector<T>() {}
+		secure_vector() : util::basic_secure_vector<T>() {}
 
 		secure_vector(const std::vector<T>& vec) : util::basic_secure_vector<T>(vec.begin(), vec.end()) {}
 
@@ -133,8 +133,23 @@ namespace nodeMsPassport {
 
 		secure_wstring(const std::wstring& str) : util::basic_secure_wstring(str.begin(), str.end()) {}
 
+		secure_wstring(const secure_vector<unsigned char>& data) : util::basic_secure_wstring(data.size() / sizeof(wchar_t), L' ') {
+			bool ok = memcpy_s((wchar_t*)this->data(), this->size() * sizeof(wchar_t), data.data(), data.size()) == 0;
+			if (!ok) this->resize(0);
+		}
+
 		NODEMSPASSPORT_NODISCARD std::wstring to_wstring() const {
 			return std::wstring(this->begin(), this->end());
+		}
+
+		NODEMSPASSPORT_NODISCARD secure_vector<unsigned char> getBytes() const {
+			secure_vector<unsigned char> tmp;
+			tmp.resize(this->size() * sizeof(wchar_t));
+
+			bool ok = memcpy_s(tmp.data(), tmp.size(), this->c_str(), this->size() * sizeof(wchar_t)) == 0;
+			if (!ok) tmp.resize(0);
+
+			return tmp;
 		}
 	};
 
@@ -378,5 +393,74 @@ namespace nodeMsPassport {
 		 * @return if the password entry is encrypted
 		 */
 		NODEMSPASSPORT_EXPORT bool isEncrypted(const std::wstring& target, bool& ok);
+	}
+
+	/**
+	 * Namespace for encrypting passwords
+	 */
+	namespace passwords {
+		namespace util {
+			/**
+			 * A struct for storing results for both if the operation was successful
+			 * and the main operation result
+			 */
+			typedef struct result_s {
+				bool ok;
+				bool res;
+			} result;
+
+			NODEMSPASSPORT_EXPORT void deleteWstring(secure_wstring* in);
+
+			NODEMSPASSPORT_EXPORT bool encrypt(const secure_wstring& data, secure_wstring*& out);
+
+			NODEMSPASSPORT_EXPORT bool decrypt(const secure_wstring& data, secure_wstring*& out);
+
+			NODEMSPASSPORT_EXPORT bool isEncrypted(const secure_wstring& data, bool& ok);
+		}
+
+		/**
+		 * Encrypt data using CredProtectW function
+		 *
+		 * @param data the data to encrypt, will remain unchanged if the encryption failed
+		 * @return if the operation was successful
+		 */
+		inline bool encrypt(secure_wstring& data) {
+			secure_wstring* out = nullptr;
+			bool ok = util::encrypt(data, out);
+			if (!ok) return false;
+
+			data = secure_wstring(out->begin(), out->end());
+			util::deleteWstring(out);
+			return true;
+		}
+
+		/**
+		 * Decrypt data using CredUnprotectW function
+		 *
+		 * @param data the data to decrypt, will remain unchanged if the decryption failed
+		 * @return if the operation was successful
+		 */
+		inline bool decrypt(secure_wstring& data) {
+			secure_wstring* out = nullptr;
+			bool ok = util::decrypt(data, out);
+			if (!ok) return false;
+
+			data = secure_wstring(out->begin(), out->end());
+			util::deleteWstring(out);
+			return true;
+		}
+
+		/**
+		 * Check if data was protected using CredProtectW
+		 *
+		 * @param data the data to check
+		 * @return the operation result
+		 */
+		inline util::result isEncrypted(const secure_wstring& data) {
+			bool ok;
+			bool res = util::isEncrypted(data, ok);
+
+			return util::result{ok, res};
+		}
 	}
 }

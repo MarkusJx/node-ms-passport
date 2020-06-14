@@ -289,3 +289,42 @@ NODEMSPASSPORT_EXPORT bool credentials::isEncrypted(const std::wstring& target, 
 		return false;
 	}
 }
+
+NODEMSPASSPORT_EXPORT void passwords::util::deleteWstring(secure_wstring* in) {
+	delete in;
+}
+
+NODEMSPASSPORT_EXPORT bool passwords::util::encrypt(const secure_wstring& data, secure_wstring*& out) {
+	secure_wstring copy = data;
+	bool ok = protectCredential(copy);
+	if (!ok) return false;
+
+	out = new secure_wstring(copy.begin(), copy.end());
+	return true;
+}
+
+NODEMSPASSPORT_EXPORT bool passwords::util::decrypt(const secure_wstring& data, secure_wstring*& out) {
+	secure_wstring copy = data;
+	bool ok = unprotectCredential(copy);
+	if (!ok) return false;
+
+	out = new secure_wstring(copy.begin(), copy.end());
+	return true;
+}
+
+NODEMSPASSPORT_EXPORT bool passwords::util::isEncrypted(const secure_wstring& data, bool& ok) {
+	CRED_PROTECTION_TYPE protectionType;
+	secure_vector<wchar_t> pass_cpy(data.begin(), data.end());
+	ok = CredIsProtectedW(pass_cpy.data(), &protectionType);
+	if (ok) {
+		if (protectionType == CredUnprotected) {
+			return false;
+		}
+		else {
+			return true;
+		}
+	}
+	else {
+		return false;
+	}
+}

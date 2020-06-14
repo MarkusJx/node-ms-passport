@@ -123,3 +123,42 @@ if (result == null) {
     return;
 }
 ```
+
+### Encrypt data
+
+Encrypting data using [CredProtectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credprotectw)
+and [CredUnprotectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credunprotectw) is also
+supported.
+
+```js
+// Encrypt a password
+let data = passwords.encrypt("TestPassword");
+// Returns null on failure
+if (data == null) {
+    return;
+}
+
+// Check if the data is encrypted
+let res = passwords.isEncrypted(data);
+// Check if the operation was successful
+if (!res.ok) {
+    return;
+}
+// The result will be stored in res.encrypted
+
+// Trying to call any function which requires a hex string with
+// invalid data will throw an error
+try {
+    passwords.isEncrypted("data"); // 't' is no valid hex character
+} catch (e) {
+    console.error(e);
+    return;
+}
+
+// Decrypt the data
+data = passwords.decrypt(data);
+// Returns null on failure
+if (data == null) {
+    return;
+}
+```

@@ -162,6 +162,38 @@ module.exports = {
         }
     },
     /**
+     * Password encryption using windows APIs
+     */
+    passwords: {
+        /**
+         * Encrypt a password using CredProtect
+         *
+         * @param data {string} the data to encrypt
+         * @returns {string | null} the result as hex string or null if unsuccessful
+         */
+        encrypt: function (data) {
+            return passport_native.js_encryptPassword(data);
+        },
+        /**
+         * Decrypt a password using CredUnprotect
+         *
+         * @param data {string} the data to decrypt as hex string
+         * @returns {string | null} the result as string or null if unsuccessful
+         */
+        decrypt: function(data) {
+            return passport_native.js_decryptPassword(data);
+        },
+        /**
+         * Check if data was encrypted using CredProtect
+         *
+         * @param data {string} the data as hex string
+         * @returns {{ok: boolean, encrypted: boolean}} if the operation was successful and if the password is encrypted
+         */
+        isEncrypted: function (data) {
+            return passport_native.js_passwordEncrypted(data);
+        }
+    },
+    /**
      * Utilities
      */
     passport_utils: {

@@ -1,5 +1,5 @@
 const assert = require("assert");
-const {passport, passport_utils, credentials} = require('./index');
+const {passport, passport_utils, credentials, passwords} = require('./index');
 
 
 describe('Passport test', function () {
@@ -40,7 +40,6 @@ describe('Credential manager test', function () {
     describe('with encryption', function () {
         it('Credential write', function () {
             assert(credentials.write("test/test", "test", "testPassword"));
-            console.log(require("./index").library);
         });
         it('Credential read', function () {
             const read = credentials.read("test/test");
@@ -57,7 +56,7 @@ describe('Credential manager test', function () {
             assert(credentials.remove("test/test"));
         });
     });
-    describe('without encryption', function() {
+    describe('without encryption', function () {
         it('Credential write', function () {
             assert(credentials.write("test/testRaw", "test", "testPassword", false));
         });
@@ -75,5 +74,27 @@ describe('Credential manager test', function () {
         it('Credential delete', function () {
             assert(credentials.remove("test/testRaw"));
         });
+    });
+});
+
+describe('Password encryption', function () {
+    let data;
+    it('Encrypt password', function () {
+        data = passwords.encrypt("TestPassword");
+        assert.notStrictEqual(data, null);
+    });
+    it('Check if encrypted', function () {
+        let res = passwords.isEncrypted(data);
+        assert(res.ok);
+        assert(res.encrypted);
+    });
+    it('Check if throws on invalid hex string', function () {
+        assert.throws(function () {
+            passwords.isEncrypted("data");
+        }, new Error("Invalid character: 't' is not a valid hex digit"));
+    });
+    it('Decrypt password', function () {
+        data = passwords.decrypt(data);
+        assert.strictEqual(data, "TestPassword");
     });
 });

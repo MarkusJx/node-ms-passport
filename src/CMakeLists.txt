@@ -6,6 +6,7 @@ project(passport)
 set(CMAKE_CXX_STANDARD 17)
 
 include_directories(${CMAKE_JS_INC})
+add_compile_definitions(NAPI_CPP_EXCEPTIONS)
 
 file(GLOB src
         *.hpp

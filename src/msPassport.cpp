@@ -77,13 +77,24 @@ namespace util {
     }
 }
 
+class conversionException : public std::exception {
+public:
+    using std::exception::exception;
+};
+
 passport::util::secure_byte_vector string_to_binary(const std::string &source) {
     static unsigned int nibbles[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
     passport::util::secure_byte_vector retval;
     for (std::string::const_iterator it = source.begin(); it < source.end(); it += 2) {
-        unsigned char v = 0;
+        unsigned char v;
         if (isxdigit(*it))
             v = nibbles[toupper(*it) - '0'] << (unsigned) 4;
+        else {
+            std::string err = "Invalid character: '";
+            err += (char) *it;
+            err.append("' is not a valid hex digit");
+            throw conversionException(err.c_str());
+        }
         if (it + 1 < source.end() && isxdigit(*(it + 1)))
             v += nibbles[toupper(*(it + 1)) - '0'];
         retval.push_back(v);
@@ -254,6 +265,56 @@ Napi::Object credentialEncrypted(const Napi::CallbackInfo &info) {
     } CATCH_EXCEPTIONS
 }
 
+Napi::Value encryptPassword(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING);
+
+    try {
+        Napi::Env env = info.Env();
+        std::u16string data_u16 = info[0].As<Napi::String>();
+        secure_wstring data(data_u16.begin(), data_u16.end());
+
+        bool ok = passwords::encrypt(data);
+
+        if (!ok) return env.Null();
+        else return Napi::String::New(env, binary_to_string(data.getBytes()));
+    } CATCH_EXCEPTIONS
+}
+
+Napi::Value decryptPassword(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING);
+
+    try {
+        Napi::Env env = info.Env();
+        std::string data_str = info[0].As<Napi::String>();
+        secure_wstring data(string_to_binary(data_str));
+
+        bool ok = passwords::decrypt(data);
+
+        if (!ok) return env.Null();
+        else return Napi::String::New(env, std::u16string(data.begin(), data.end()));
+    } CATCH_EXCEPTIONS
+}
+
+Napi::Object passwordEncrypted(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING);
+
+    try {
+        Napi::Env env = info.Env();
+        std::string password = info[0].As<Napi::String>();
+
+        secure_vector<unsigned char> data_vec = string_to_binary(password);
+        secure_wstring data(data_vec);
+
+        auto res = passwords::isEncrypted(data);
+
+        Napi::Object obj = Napi::Object::New(env);
+        obj.Set("ok", Napi::Boolean::New(env, res.ok));
+        obj.Set("encrypted", Napi::Boolean::New(env, res.res));
+
+        return obj;
+    } CATCH_EXCEPTIONS
+}
+
 Napi::String generateRandom(const Napi::CallbackInfo &info) {
     CHECK_ARGS(NUMBER);
 
@@ -287,6 +348,10 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     exports.Set(EXPORT(readCredential));
     exports.Set(EXPORT(removeCredential));
     exports.Set(EXPORT(credentialEncrypted));
+
+    exports.Set(EXPORT(encryptPassword));
+    exports.Set(EXPORT(decryptPassword));
+    exports.Set(EXPORT(passwordEncrypted));
 
     exports.Set(EXPORT(generateRandom));
 
