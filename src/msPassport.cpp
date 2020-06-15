@@ -2,6 +2,8 @@
 #include <sstream>
 #include <random>
 #include <NodeMsPassport.hpp>
+#include <utility>
+#include <iostream>
 
 #define CHECK_ARGS(...) ::util::checkArgs(info, ::util::removeNamespace(__FUNCTION__), {__VA_ARGS__})
 /*#define CHECK_INDEX(index, size) if (index < 0) throw Napi::RangeError::New(env, "Negative index requested"); \
@@ -77,11 +79,6 @@ namespace util {
     }
 }
 
-class conversionException : public std::exception {
-public:
-    using std::exception::exception;
-};
-
 passport::util::secure_byte_vector string_to_binary(const std::string &source) {
     static unsigned int nibbles[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15};
     passport::util::secure_byte_vector retval;
@@ -93,7 +90,7 @@ passport::util::secure_byte_vector string_to_binary(const std::string &source) {
             std::string err = "Invalid character: '";
             err += (char) *it;
             err.append("' is not a valid hex digit");
-            throw conversionException(err.c_str());
+            throw std::exception(err.c_str());
         }
         if (it + 1 < source.end() && isxdigit(*(it + 1)))
             v += nibbles[toupper(*(it + 1)) - '0'];
@@ -109,6 +106,114 @@ std::string binary_to_string(const passport::util::secure_byte_vector &source) {
         ss << syms[(((unsigned) it >> (unsigned) 4) & (unsigned) 0xf)] << syms[(unsigned) it & (unsigned) 0xf];
 
     return ss.str();
+}
+
+namespace workers {
+    class createPassportKeyWorker : public Napi::AsyncWorker {
+    public:
+        createPassportKeyWorker(const Napi::Env &env, std::string account) : Napi::AsyncWorker(env),
+                                                                             deferred(
+                                                                                     Napi::Promise::Deferred::New(env)),
+                                                                             account(std::move(account)), status(1) {}
+
+        ~createPassportKeyWorker() override = default;
+
+        void Execute() override {
+            try {
+                passport::OperationResult res = passport::createPassportKey(account);
+                if (res.ok()) data = binary_to_string(res.data);
+                status = res.status;
+            } catch (const std::exception &e) {
+                Napi::AsyncWorker::SetError(e.what());
+            } catch (...) {
+                Napi::AsyncWorker::SetError("An unknown exception occurred");
+            }
+        }
+
+        void OnOK() override {
+            Napi::Object obj = Napi::Object::New(Env());
+            obj.Set("status", Napi::Number::New(Env(), status));
+            obj.Set("ok", Napi::Boolean::New(Env(), status == 0));
+            if (status == 0) {
+                obj.Set("data", Napi::String::New(Env(), data));
+            } else {
+                obj.Set("data", Env().Null());
+            }
+
+            deferred.Resolve(obj);
+        }
+
+        void OnError(Napi::Error const &error) override {
+            deferred.Reject(error.Value());
+        }
+
+        Napi::Promise GetPromise() {
+            return deferred.Promise();
+        }
+
+    private:
+        Napi::Promise::Deferred deferred;
+        std::string account;
+        int status;
+        std::string data;
+    };
+
+    class passportSignWorker : public Napi::AsyncWorker {
+    public:
+        passportSignWorker(const Napi::Env &env, std::string account, std::string challenge) : Napi::AsyncWorker(env),
+                                                                                               deferred(
+                                                                                                       Napi::Promise::Deferred::New(
+                                                                                                               env)),
+                                                                                               account(std::move(
+                                                                                                       account)),
+                                                                                               challenge(std::move(
+                                                                                                       challenge)),
+                                                                                               status(1) {}
+
+        ~passportSignWorker() override = default;
+
+        void Execute() override {
+            try {
+                passport::util::secure_byte_vector challenge_vec = string_to_binary(challenge);
+
+                passport::OperationResult res = passport::passportSign(account, challenge_vec);
+
+                if (res.ok()) data = binary_to_string(res.data);
+                status = res.status;
+            } catch (const std::exception &e) {
+                Napi::AsyncWorker::SetError(e.what());
+            } catch (...) {
+                Napi::AsyncWorker::SetError("An unknown exception occurred");
+            }
+        }
+
+        void OnOK() override {
+            Napi::Object obj = Napi::Object::New(Env());
+            obj.Set("status", Napi::Number::New(Env(), status));
+            obj.Set("ok", Napi::Boolean::New(Env(), status == 0));
+            if (status == 0) {
+                obj.Set("data", Napi::String::New(Env(), data));
+            } else {
+                obj.Set("data", Env().Null());
+            }
+
+            deferred.Resolve(obj);
+        }
+
+        void OnError(Napi::Error const &error) override {
+            deferred.Reject(error.Value());
+        }
+
+        Napi::Promise GetPromise() {
+            return deferred.Promise();
+        }
+
+    private:
+        Napi::Promise::Deferred deferred;
+        std::string account, challenge;
+        int status;
+        std::string data;
+    };
 }
 
 Napi::Object convertToObject(const Napi::Env &env, const passport::OperationResult &res) {
@@ -141,6 +246,20 @@ Napi::Object createPassportKey(const Napi::CallbackInfo &info) {
     } CATCH_EXCEPTIONS
 }
 
+Napi::Promise createPassportKeyAsync(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING);
+    Napi::Env env = info.Env();
+    std::string account = info[0].As<Napi::String>();
+
+    // Napi destroys this object
+    auto *worker = new workers::createPassportKeyWorker(env, account);
+    Napi::Promise promise = worker->GetPromise();
+
+    worker->Queue();
+
+    return promise;
+}
+
 Napi::Object passportSign(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING, STRING);
 
@@ -152,6 +271,22 @@ Napi::Object passportSign(const Napi::CallbackInfo &info) {
 
         return convertToObject(info.Env(), res);
     } CATCH_EXCEPTIONS
+}
+
+Napi::Object passportSignAsync(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING, STRING);
+
+    Napi::Env env = info.Env();
+    std::string account = info[0].As<Napi::String>();
+    std::string challenge = info[1].As<Napi::String>();
+
+    // Napi destroys this object
+    auto *worker = new workers::passportSignWorker(env, account, challenge);
+    Napi::Promise promise = worker->GetPromise();
+
+    worker->Queue();
+
+    return promise;
 }
 
 Napi::Number deletePassportAccount(const Napi::CallbackInfo &info) {
@@ -338,7 +473,9 @@ Napi::String generateRandom(const Napi::CallbackInfo &info) {
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     exports.Set(EXPORT(passportAvailable));
     exports.Set(EXPORT(createPassportKey));
+    exports.Set(EXPORT(createPassportKeyAsync));
     exports.Set(EXPORT(passportSign));
+    exports.Set(EXPORT(passportSignAsync));
     exports.Set(EXPORT(deletePassportAccount));
     exports.Set(EXPORT(getPublicKey));
     exports.Set(EXPORT(getPublicKeyHash));

@@ -133,6 +133,14 @@ namespace nodeMsPassport {
 
 		secure_wstring(const std::wstring& str) : util::basic_secure_wstring(str.begin(), str.end()) {}
 
+        secure_wstring(const std::string &str) : util::basic_secure_wstring(str.size() + 1, L' ') {
+            size_t outSize;
+
+            errno_t err = mbstowcs_s(&outSize, (wchar_t *) this->data(), this->size(), str.c_str(), str.size());
+            if (err) perror("Error creating wide string");
+            this->resize(outSize);
+        }
+
 		secure_wstring(const secure_vector<unsigned char>& data) : util::basic_secure_wstring(data.size() / sizeof(wchar_t), L' ') {
 			bool ok = memcpy_s((wchar_t*)this->data(), this->size() * sizeof(wchar_t), data.data(), data.size()) == 0;
 			if (!ok) this->resize(0);
@@ -151,6 +159,17 @@ namespace nodeMsPassport {
 
 			return tmp;
 		}
+
+        NODEMSPASSPORT_NODISCARD inline std::string to_string() const {
+            std::string out(this->size() + 1, ' ');
+            size_t outSize;
+
+            errno_t err = wcstombs_s(&outSize, (char *) out.data(), out.size(), this->c_str(), this->size());
+            if (err) perror("Error creating string");
+            out.resize(outSize);
+
+            return out;
+        }
 	};
 
 	/**
@@ -405,8 +424,8 @@ namespace nodeMsPassport {
 			 * and the main operation result
 			 */
 			typedef struct result_s {
-				bool ok;
-				bool res;
+				const bool ok;
+				const bool res;
 			} result;
 
 			NODEMSPASSPORT_EXPORT void deleteWstring(secure_wstring* in);

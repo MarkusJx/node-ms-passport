@@ -64,6 +64,16 @@ module.exports = {
             return passport_native.js_createPassportKey(accountId);
         },
         /**
+         * Create a microsoft passport key asynchronously
+         *
+         * @param accountId {string} the account id to add
+         * @return {promise.<{status: number, ok: boolean, data: string | null}>} the status, equals to 0 if everything is ok.
+         *          If so, data will contain the public key as hex string
+         */
+        createPassportKeyAsync: function (accountId) {
+            return passport_native.js_createPassportKeyAsync(accountId);
+        },
+        /**
          * Sign a challenge
          *
          * @param accountId {string} the account id
@@ -73,6 +83,17 @@ module.exports = {
          */
         passportSign: function (accountId, challenge) {
             return passport_native.js_passportSign(accountId, challenge);
+        },
+        /**
+         * Sign a challenge asynchronously
+         *
+         * @param accountId {string} the account id
+         * @param challenge {string} the challenge to sign
+         * @return {promise.<{status: number, ok: boolean, data: string | null}>} the status, equals to 0 if everything is ok.
+         *         If so, data will contain the signature as hex string
+         */
+        passportSignAsync: function (accountId, challenge) {
+            return passport_native.js_passportSignAsync(accountId, challenge);
         },
         /**
          * Delete a passport account

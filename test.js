@@ -12,6 +12,15 @@ describe('Passport test', function () {
         createRes = passport.createPassportKey("test");
         assert.strictEqual(createRes.status, 0);
     });
+    it('Deleting passport key', function () {
+        const deleted = passport.deletePassportAccount("test");
+        assert.strictEqual(deleted, 0);
+    });
+    it('Creating passport key asynchronously', async function () {
+        this.timeout(0);
+        createRes = await passport.createPassportKeyAsync("test");
+        assert.strictEqual(createRes.status, 0);
+    });
     it('Checking public key', function () {
         publicKey = passport.getPublicKey("test");
         assert.strictEqual(publicKey.status, 0);
@@ -24,6 +33,15 @@ describe('Passport test', function () {
     it('Signing challenge', function () {
         this.timeout(0); // No timeout since this requires user interaction
         signed = passport.passportSign("test", challenge);
+        assert.strictEqual(signed.status, 0);
+    });
+    it('Verifying signature', function () {
+        const signatureMatches = passport.verifySignature(challenge, signed.data, createRes.data);
+        assert(signatureMatches);
+    });
+    it('Signing challenge asynchronously', async function () {
+        this.timeout(0);
+        signed = await passport.passportSignAsync("test", challenge);
         assert.strictEqual(signed.status, 0);
     });
     it('Verifying signature', function () {
