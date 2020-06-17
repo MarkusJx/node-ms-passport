@@ -106,13 +106,13 @@ if (!successful) {
 }
 
 // Maybe check if the data is encrypted, here the this would return true
-const encrypted = credentials.isEncrypted("test/test");
-// Check if the operation was successful
-if (!encrypted.ok) {
+let encrypted;
+try {
+    encrypted = credentials.isEncrypted("test/test");
+} catch (e) { // Should not be called
+    console.error("Data should be encrypted, but it is not");
     return;
 }
-
-// The result will be stored in encrypted.encrypted
 
 // Read credentials
 let result = credentials.read("test/test");
@@ -170,19 +170,25 @@ Encrypting and decrypting a password:
 const {passwords} = require('node-ms-passport');
 
 // Encrypt a password
-let data = passwords.encrypt("TestPassword");
-// Returns null on failure
-if (data == null) {
-    return;
+let data;
+try {
+    data = passwords.encrypt("TestPassword");
+} catch (e) {
+    return; // Throws on failure
 }
 
 // Check if the data is encrypted
-let res = passwords.isEncrypted(data);
-// Check if the operation was successful
-if (!res.ok) {
+let encrypted;
+try {
+    encrypted = passwords.isEncrypted(data);
+} catch (e) {
+    return; // Throws error on failure
+}
+
+if (!encrypted) { // Should not be called
+    console.error("Data should be encrypted, but it is not");
     return;
 }
-// The result will be stored in res.encrypted
 
 // Trying to call any function which requires a hex string with
 // invalid data will throw an error
@@ -194,10 +200,10 @@ try {
 }
 
 // Decrypt the data
-data = passwords.decrypt(data);
-// Returns null on failure
-if (data == null) {
-    return;
+try {
+    data = passwords.decrypt(data);
+} catch (e) {
+    return; // Throws on failure
 }
 ```
 
@@ -268,14 +274,18 @@ int main() {
     }
 
     // Check if the password is encrypted
-    bool encrypted = isEncrypted(L"test/test", ok);
-    if (!ok) {
-        return 1;
+    bool encrypted;
+    try {
+        encrypted = isEncrypted(L"test/test");
+    } catch (NodeMsPassport::encryptionException &e) {
+        return 1; // Throws exception if not ok
     }
 
     // Should return true
     if (!encrypted) {
-        return 2; // Should never be called, if the encryption fails, write returns false.
+        // Should never be called,
+        // if the encryption fails, write returns false.
+        return 2;
     }
 
     // Read the password, it is encrypted, so decrypt it. If you don't know
@@ -317,13 +327,15 @@ int main() {
     }
 
     // Check if the data is encrypted
-    util::result res = isEncrypted(password);
-    if (!res.ok) {
-        return 1;
+    bool encrypted;
+    try {
+        encrypted = isEncrypted(password);
+    } catch (NodeMsPassport::encryptionException &e) {
+        return 1; // Throws exception if not ok
     }
 
     // The result is stored in res.res
-    if (!res.res) {
+    if (!encrypted) {
         // Should never be called, if the encryption fails,
         // encrypt returns false.
         return 2;
@@ -331,7 +343,7 @@ int main() {
 
     // Decrypt the data
     ok = decrypt(password);
-    if (!res.ok) {
+    if (!ok) {
         return 1;
     }
 

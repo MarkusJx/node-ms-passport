@@ -383,24 +383,20 @@ Napi::Boolean removeCredential(const Napi::CallbackInfo &info) {
     } CATCH_EXCEPTIONS
 }
 
-Napi::Object credentialEncrypted(const Napi::CallbackInfo &info) {
+Napi::Boolean credentialEncrypted(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING);
 
     try {
         Napi::Env env = info.Env();
         std::u16string target = info[0].As<Napi::String>();
 
-        bool ok;
-        bool res = credentials::isEncrypted(std::wstring(target.begin(), target.end()), ok);
-        Napi::Object obj = Napi::Object::New(env);
-        obj.Set("ok", Napi::Boolean::New(env, ok));
-        obj.Set("encrypted", Napi::Boolean::New(env, res));
+        bool res = credentials::isEncrypted(std::wstring(target.begin(), target.end()));
 
-        return obj;
+        return Napi::Boolean::New(env, res);
     } CATCH_EXCEPTIONS
 }
 
-Napi::Value encryptPassword(const Napi::CallbackInfo &info) {
+Napi::String encryptPassword(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING);
 
     try {
@@ -410,12 +406,12 @@ Napi::Value encryptPassword(const Napi::CallbackInfo &info) {
 
         bool ok = passwords::encrypt(data);
 
-        if (!ok) return env.Null();
+        if (!ok) throw exception("Could not encrypt the data");
         else return Napi::String::New(env, binary_to_string(data.getBytes()));
     } CATCH_EXCEPTIONS
 }
 
-Napi::Value decryptPassword(const Napi::CallbackInfo &info) {
+Napi::String decryptPassword(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING);
 
     try {
@@ -425,12 +421,12 @@ Napi::Value decryptPassword(const Napi::CallbackInfo &info) {
 
         bool ok = passwords::decrypt(data);
 
-        if (!ok) return env.Null();
+        if (!ok) throw exception("Could not decrypt the data");
         else return Napi::String::New(env, std::u16string(data.begin(), data.end()));
     } CATCH_EXCEPTIONS
 }
 
-Napi::Object passwordEncrypted(const Napi::CallbackInfo &info) {
+Napi::Boolean passwordEncrypted(const Napi::CallbackInfo &info) {
     CHECK_ARGS(STRING);
 
     try {
@@ -440,13 +436,9 @@ Napi::Object passwordEncrypted(const Napi::CallbackInfo &info) {
         secure_vector<unsigned char> data_vec = string_to_binary(password);
         secure_wstring data(data_vec);
 
-        auto res = passwords::isEncrypted(data);
+        bool res = passwords::isEncrypted(data);
 
-        Napi::Object obj = Napi::Object::New(env);
-        obj.Set("ok", Napi::Boolean::New(env, res.ok));
-        obj.Set("encrypted", Napi::Boolean::New(env, res.res));
-
-        return obj;
+        return Napi::Boolean::New(env, res);
     } CATCH_EXCEPTIONS
 }
 

@@ -67,8 +67,7 @@ describe('Credential manager test', function () {
         });
         it('Password encrypted check', function () {
             const encrypted = credentials.isEncrypted("test/test");
-            assert(encrypted.ok);
-            assert.strictEqual(encrypted.encrypted, true);
+            assert(encrypted);
         });
         it('Credential delete', function () {
             assert(credentials.remove("test/test"));
@@ -86,8 +85,7 @@ describe('Credential manager test', function () {
         });
         it('Password encrypted check', function () {
             const encrypted = credentials.isEncrypted("test/testRaw");
-            assert(encrypted.ok);
-            assert.strictEqual(encrypted.encrypted, false);
+            assert.strictEqual(encrypted, false);
         });
         it('Credential delete', function () {
             assert(credentials.remove("test/testRaw"));
@@ -102,9 +100,8 @@ describe('Password encryption', function () {
         assert.notStrictEqual(data, null);
     });
     it('Check if encrypted', function () {
-        let res = passwords.isEncrypted(data);
-        assert(res.ok);
-        assert(res.encrypted);
+        let encrypted = passwords.isEncrypted(data);
+        assert(encrypted);
     });
     it('Check if throws on invalid hex string', function () {
         assert.throws(function () {
