@@ -212,7 +212,7 @@ A c++ api is shipped with the addon to be used with custom node.js modules.
 To get the include path call: ``node -p "require('node-ms-passport').include"``, for the library to link to call:
 ``node -p "require('node-ms-passport').library"``, to get the binary file path call: ``node -p "require('node-ms-passport').binary"``.
 
-###Passport example
+### Passport example
 ```c++
 #include <NodeMsPassport.hpp>
 
