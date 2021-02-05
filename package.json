@@ -1,6 +1,6 @@
 {
   "name": "node-ms-passport",
-  "version": "0.0.8",
+  "version": "0.0.9",
   "description": "Microsoft passport with windows hello and credential manager for node js",
   "repository": "https://github.com/MarkusJx/node-ms-passport",
   "gypfile": true,
@@ -10,7 +10,8 @@
     "postbuild": "node copy-deps.js copy",
     "install": "node install.js",
     "prepare": "npm run-script build",
-    "create-lib": "node copy-deps.js create-lib"
+    "create-lib": "node copy-deps.js create-lib",
+    "test": "mocha"
   },
   "keywords": [
     "Electron",
@@ -24,10 +25,9 @@
   "license": "MIT",
   "devDependencies": {
     "cmake-js": "^6.1.0",
-    "mocha": "^8.0.1",
-    "node-addon-api": "^3.0.0"
+    "mocha": "^8.2.1",
+    "node-addon-api": "^3.1.0"
   },
-  "dependencies": {},
   "main": "index.js",
   "os": [
     "win32"
