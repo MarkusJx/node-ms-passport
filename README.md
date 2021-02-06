@@ -219,15 +219,20 @@ try {
 
 ## C++ Api
 A c++ api is shipped with the addon to be used with custom node.js modules.
-To get the include path call: ``node -p "require('node-ms-passport').include"``, for the library to link to call:
-``node -p "require('node-ms-passport').library"``, to get the binary file path call: ``node -p "require('node-ms-passport').binary"``.
+To get the include path call: ``node -p "require('node-ms-passport').passport_lib.include_dir"``, for the library to link to call:
+``node -p "require('node-ms-passport').passport_lib.library"``.
+
+Your should probably set the location of the C# dll in order for the program to work properly:
+```c++
+nodeMsPassport::passport::setCSharpDllLocation("CSHARP_DLL_LOCATION");
+```
 
 ### Passport example
 ```c++
 #include <NodeMsPassport.hpp>
 
 int main() {
-    using namespace NodeMsPassport::passport;
+    using namespace nodeMsPassport::passport;
 
     // Check if passport is available
     if (!passportAvailable()) {
@@ -275,7 +280,7 @@ Since the c++ api has all the functionality of the node.js api, the credential m
 #include <NodeMsPassport.hpp>
 
 int main() {
-    using namespace NodeMsPassport::credentials;
+    using namespace nodeMsPassport::credentials;
 
     // Write a password and encrypt it
     bool ok = write(L"test/test", L"testUser", L"testPassword", true);
@@ -326,7 +331,7 @@ and [CredUnprotectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/
 #include <NodeMsPassport.hpp>
 
 int main() {
-    using namespace NodeMsPassport::passwords;
+    using namespace nodeMsPassport::passwords;
     
     secure_wstring password = L"Password";
 

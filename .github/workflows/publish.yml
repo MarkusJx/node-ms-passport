@@ -10,14 +10,8 @@ jobs:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-node@v1
-        with:
-          node-version: 14
-          registry-url: https://registry.npmjs.org/
-      - name: setup-msbuild
-        uses: microsoft/setup-msbuild@v1
-      - run: npm run-script build
-        continue-on-error: true
+      - run: npm ci
+        continue-on-error: false
       - run: npm publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.npm_token}}
