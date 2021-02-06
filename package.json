@@ -3,14 +3,12 @@
   "version": "0.0.9",
   "description": "Microsoft passport with windows hello and credential manager for node js",
   "repository": "https://github.com/MarkusJx/node-ms-passport",
-  "gypfile": true,
   "scripts": {
-    "build": "cmake-js build --arch ia32 -d src --out build32 && cmake-js build --arch x64 -d src --out build64",
-    "prebuild": "node prebuild.js",
-    "postbuild": "node copy-deps.js copy",
-    "install": "node install.js",
-    "prepare": "npm run-script build",
-    "create-lib": "node copy-deps.js create-lib",
+    "build": "cmake-js compile",
+    "postbuild": "node install.js --post_build",
+    "install": "npm run-script build",
+    "postinstall": "node install.js",
+    "pretest": "npm run-script build",
     "test": "mocha"
   },
   "keywords": [

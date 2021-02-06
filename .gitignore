@@ -351,3 +351,6 @@ MigrationBackup/
 build32/
 build64/
 passport/
+build/
+.vscode
+lib/

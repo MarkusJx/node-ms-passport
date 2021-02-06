@@ -1,21 +1,7 @@
 #pragma once
 
 #include <vector>
-
-#ifdef NODEMSPASSPORT_STATIC_DEFINE
-#  define NODEMSPASSPORT_EXPORT
-#  define NODEMSPASSPORT_NO_EXPORT
-#else
-#  ifndef NODEMSPASSPORT_EXPORT
-#    ifdef NODEMSPASSPORT_EXPORTS
-/* We are building this library */
-#      define NODEMSPASSPORT_EXPORT __declspec(dllexport)
-#    else
-/* We are using this library */
-#      define NODEMSPASSPORT_EXPORT __declspec(dllimport)
-#    endif
-#  endif
-#endif
+#include <string>
 
 #if __cplusplus >= 201603L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201603L)
 #   define NODEMSPASSPORT_NODISCARD [[nodiscard]]
@@ -194,24 +180,31 @@ namespace nodeMsPassport {
          * The unmanaged namespace. Functions in here should not be used.
          */
         namespace unmanaged {
-            NODEMSPASSPORT_EXPORT void freeData(char *data);
+            void freeData(char *data);
 
-            NODEMSPASSPORT_EXPORT char *createPassportKey(int &status, int &outSize, const char *accountId);
+            char *createPassportKey(int &status, int &outSize, const char *accountId);
 
-            NODEMSPASSPORT_EXPORT char *
+            char *
             passportSign(int &status, int &outSize, const char *accountId, const util::byte *challenge,
                          int challengeSize);
 
-            NODEMSPASSPORT_EXPORT char *getPublicKey(int &status, int &outSize, const char *accountId);
+            char *getPublicKey(int &status, int &outSize, const char *accountId);
 
-            NODEMSPASSPORT_EXPORT char *getPublicKeyHash(int &status, int &outSize, const char *accountId);
+            char *getPublicKeyHash(int &status, int &outSize, const char *accountId);
 
-            NODEMSPASSPORT_EXPORT bool
+            bool
             verifyChallenge(const util::byte *challenge, int challengeSize, const util::byte *signature,
                             int signatureSize, const util::byte *publicKey, int publicKeySize);
 
-            NODEMSPASSPORT_EXPORT int deletePassportAccount(const char *accountId);
+            int deletePassportAccount(const char *accountId);
         }
+
+        /**
+         * Set where the C# dll is located
+         * 
+         * @param location the location of the C# dll. Must end with an '/'.
+         */
+        void setCSharpDllLocation(const std::string &location);
 
         /**
          * A class to get results of any passport operations
@@ -248,7 +241,7 @@ namespace nodeMsPassport {
          *
          * @return true if passport is available
          */
-        NODEMSPASSPORT_EXPORT bool passportAvailable();
+        bool passportAvailable();
 
         /**
          * Get a passport public key
@@ -364,12 +357,12 @@ namespace nodeMsPassport {
      */
     namespace credentials {
         namespace util {
-            NODEMSPASSPORT_EXPORT void *
+            void *
             read(const std::wstring &target, wchar_t *&username, secure_wstring *&password, bool encrypt);
 
-            NODEMSPASSPORT_EXPORT void freePcred(void *data);
+            void freePcred(void *data);
 
-            NODEMSPASSPORT_EXPORT void deleteWstring(secure_wstring *in);
+            void deleteWstring(secure_wstring *in);
         }
 
         /**
@@ -381,7 +374,7 @@ namespace nodeMsPassport {
          * @param encrypt whether to encrypt the password
          * @return if the operation was successful
          */
-        NODEMSPASSPORT_EXPORT bool
+        bool
         write(const std::wstring &target, const std::wstring &user, const secure_wstring &password,
               bool encrypt) noexcept;
 
@@ -419,7 +412,7 @@ namespace nodeMsPassport {
          * @param target the account id to remove
          * @return if the operation was successful
          */
-        NODEMSPASSPORT_EXPORT bool remove(const std::wstring &target) noexcept;
+        bool remove(const std::wstring &target) noexcept;
 
         /**
          * Check if a password entry is encrypted
@@ -428,7 +421,7 @@ namespace nodeMsPassport {
          * @param ok if the operation was successful
          * @return if the password entry is encrypted
          */
-        NODEMSPASSPORT_EXPORT bool isEncrypted(const std::wstring &target) noexcept(false);
+        bool isEncrypted(const std::wstring &target) noexcept(false);
     }
 
     /**
@@ -436,13 +429,13 @@ namespace nodeMsPassport {
      */
     namespace passwords {
         namespace util {
-            NODEMSPASSPORT_EXPORT void deleteWstring(secure_wstring *in);
+            void deleteWstring(secure_wstring *in);
 
-            NODEMSPASSPORT_EXPORT bool encrypt(const secure_wstring &data, secure_wstring *&out);
+            bool encrypt(const secure_wstring &data, secure_wstring *&out);
 
-            NODEMSPASSPORT_EXPORT bool decrypt(const secure_wstring &data, secure_wstring *&out);
+            bool decrypt(const secure_wstring &data, secure_wstring *&out);
 
-            NODEMSPASSPORT_EXPORT bool isEncrypted(const secure_wstring &data, bool &ok);
+            bool isEncrypted(const secure_wstring &data, bool &ok);
         }
 
         /**

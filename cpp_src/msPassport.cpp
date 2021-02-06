@@ -1,9 +1,10 @@
 #include <napi.h>
 #include <sstream>
 #include <random>
-#include <NodeMsPassport.hpp>
 #include <utility>
 #include <iostream>
+
+#include "NodeMsPassport.hpp"
 
 #define CHECK_ARGS(...) ::util::checkArgs(info, ::util::removeNamespace(__FUNCTION__), {__VA_ARGS__})
 /*#define CHECK_INDEX(index, size) if (index < 0) throw Napi::RangeError::New(env, "Negative index requested"); \
@@ -462,6 +463,14 @@ Napi::String generateRandom(const Napi::CallbackInfo &info) {
     } CATCH_EXCEPTIONS
 }
 
+void setCSharpDllLocation(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(STRING);
+
+    try {
+        passport::setCSharpDllLocation(info[0].ToString().Utf8Value());
+    } CATCH_EXCEPTIONS
+}
+
 Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     exports.Set(EXPORT(passportAvailable));
     exports.Set(EXPORT(createPassportKey));
@@ -483,6 +492,7 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
     exports.Set(EXPORT(passwordEncrypted));
 
     exports.Set(EXPORT(generateRandom));
+    exports.Set(EXPORT(setCSharpDllLocation));
 
     return exports;
 }

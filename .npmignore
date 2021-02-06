@@ -6,3 +6,9 @@
 /build32/
 /copy-deps.js
 /binding.gyp
+bin/
+build/
+out/
+.vs/
+.vscode/
+lib/

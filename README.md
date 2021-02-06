@@ -27,10 +27,13 @@ Create a passport key and sign a challenge with it:
 ```js
 const {passport, passport_utils} = require('node-ms-passport');
 
+// Create a passport instance
+const pass = new passport("test");
+
 // Returns a status and the public key
-let privateKey = passport.createPassportKey("test");
+let publicKey = pass.createPassportKey();
 // Check if the status is zero, if not, abort
-if (privateKey.status !== 0) {
+if (publicKey.status !== 0) {
     return;
 }
 
@@ -38,16 +41,16 @@ if (privateKey.status !== 0) {
 let challenge = passport_utils.generateRandom(25);
 
 // Sign it
-let signature = passport.passportSign("test", challenge);
+let signature = pass.passportSign(challenge);
 // Check if the status is zero, if not, abort
 if (signature.status !== 0) {
     return;
 }
 
 // Verify the signature
-let signatureMatches = passport.verifySignature(challenge, 
-                                                signature.data,
-                                                privateKey.data);
+let signatureMatches = pass.verifySignature(challenge, 
+                                            signature.data,
+                                            privateKey.data);
 if (signatureMatches) {
     // Do something with it...
 }
@@ -55,7 +58,7 @@ if (signatureMatches) {
 
 Delete the passport key
 ```js
-let res = passport.deletePassportAccount("test");
+let res = pass.deletePassportAccount();
 // Check if the status is zero, if not, abort
 if (res !== 0) {
     return;
@@ -68,14 +71,14 @@ user input. User input is required on key creation and on signing a challenge.
 
 ```js
 // Create key
-passport.createPassportKeyAsync("testAsync").then(res => {
+pass.createPassportKeyAsync().then(res => {
     if (res.status !== 0) {
         console.error("Could not create passport key: " + res.status);
     }
 });
 
 // Sign data
-passport.passportSignAsync("test", challenge).then(res => {
+pass.passportSignAsync(challenge).then(res => {
     if (res.status !== 0) {
         console.error("Could not sign challenge: " + res.status);
     }
@@ -92,15 +95,19 @@ If the status is zero, everything was ok, 1 if a unknown error occurred, 2 if th
 It also supports the windows credential vault. Passwords will be encrypted by default.
 To use it, simply define
 ```js
-const {credentials} = require('node-ms-passport');
+const {credentialStore} = require('node-ms-passport');
 ```
 
 Writing and reading credentials to and from the windows credential manager:
 ```js
-const {credentials} = require('node-ms-passport');
+const {credentialStore} = require('node-ms-passport');
+
+// Create a credentialStore instance.
+// Will encrypt passwords by default.
+const store = new credentialStore("test/test");
 
 // Write credentials
-let successful = credentials.write("test/test", "test", "testPassword");
+let successful = store.write("test", "testPassword");
 if (!successful) {
     // Do something with it...
 }
@@ -108,14 +115,14 @@ if (!successful) {
 // Maybe check if the data is encrypted, here the this would return true
 let encrypted;
 try {
-    encrypted = credentials.isEncrypted("test/test");
+    encrypted = store.isEncrypted();
 } catch (e) { // Should not be called
     console.error("Data should be encrypted, but it is not");
     return;
 }
 
 // Read credentials
-let result = credentials.read("test/test");
+let result = store.read();
 // credentials.read() returns null if the operation failed
 if (result == null) {
     return;
@@ -129,7 +136,7 @@ let password = result.password;
 console.log("Read username:", username, "and password:", password);
 
 // Delete this credential
-successful = credentials.remove("test/test");
+successful = store.remove();
 if (!successful) {
     // Do something with it, throw an error, 
     // get some ice cream to eat under the shower...
@@ -139,8 +146,11 @@ if (!successful) {
 Encryption can be turned off by passing ``false`` to the read and write methods:
 
 ```js
+// Create a credentialStore, which does not encrypt passwords
+const store = new creadentialStore("test/test", false);
+
 // Write credentials
-let successful = credentials.write("test/test", "test", "testPassword", false);
+let successful = store.write("test", "testPassword");
 if (!successful) {
     // Do something with it...
 }
@@ -148,7 +158,7 @@ if (!successful) {
 // isEncrypted() check will return false
 
 // Read credentials
-let result = credentials.read("test/test", false);
+let result = store.read();
 // credentials.read() returns null if the operation failed
 if (result == null) {
     return;

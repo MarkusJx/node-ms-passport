@@ -35,151 +35,90 @@ if (process.platform !== 'win32') {
     }
 }
 
-const passport_native = require('./passport/' + ((process.arch === 'x64') ? 'x64' : 'x86') + '/bin/passport.node');
+const path = require('path');
+const passport_native = require(path.join(__dirname, 'bin', 'passport.node'));
+
+// Set the location for the C# dll
+passport_native.js_setCSharpDllLocation(path.join(__dirname, 'bin/'));
 
 module.exports = {
-    /**
-     * Microsoft passport for node js
-     *
-     * If the status is zero, everything was ok, 1 if a unknown error occurred, 2 if the user needs to create a pin,
-     * 3 if the user cancelled the process
-     */
-    passport: {
-        /**
-         * Check if ms passport is available on this machine
-         *
-         * @returns {boolean} true if passport is available
-         */
-        passportAvailable: function () {
+    passport: class {
+        constructor(accountId) {
+            Object.defineProperty(this, 'accountId', {
+                value: accountId,
+                enumerable: true,
+                configurable: true,
+                writable: false
+            });
+        }
+
+        createPassportKey() {
+            return passport_native.js_createPassportKey(this.accountId);
+        }
+
+        createPassportKeyAsync() {
+            return passport_native.js_createPassportKeyAsync(this.accountId);
+        }
+
+        passportSign(challenge) {
+            return passport_native.js_passportSign(this.accountId, challenge);
+        }
+
+        passportSignAsync(challenge) {
+            return passport_native.js_passportSignAsync(this.accountId, challenge);
+        }
+
+        deletePassportAccount() {
+            return passport_native.js_deletePassportAccount(this.accountId);
+        }
+
+        getPublicKey() {
+            return passport_native.js_getPublicKey(this.accountId);
+        }
+
+        getPublicKeyHash() {
+            return passport_native.js_getPublicKeyHash(this.accountId);
+        }
+
+        static passportAvailable() {
             return passport_native.js_passportAvailable();
-        },
-        /**
-         * Create a microsoft passport key
-         *
-         * @param accountId {string} the account id to add
-         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
-         *          If so, data will contain the public key as hex string
-         */
-        createPassportKey: function (accountId) {
-            return passport_native.js_createPassportKey(accountId);
-        },
-        /**
-         * Create a microsoft passport key asynchronously
-         *
-         * @param accountId {string} the account id to add
-         * @return {promise.<{status: number, ok: boolean, data: string | null}>} the status, equals to 0 if everything is ok.
-         *          If so, data will contain the public key as hex string
-         */
-        createPassportKeyAsync: function (accountId) {
-            return passport_native.js_createPassportKeyAsync(accountId);
-        },
-        /**
-         * Sign a challenge
-         *
-         * @param accountId {string} the account id
-         * @param challenge {string} the challenge to sign
-         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
-         *         If so, data will contain the signature as hex string
-         */
-        passportSign: function (accountId, challenge) {
-            return passport_native.js_passportSign(accountId, challenge);
-        },
-        /**
-         * Sign a challenge asynchronously
-         *
-         * @param accountId {string} the account id
-         * @param challenge {string} the challenge to sign
-         * @return {promise.<{status: number, ok: boolean, data: string | null}>} the status, equals to 0 if everything is ok.
-         *         If so, data will contain the signature as hex string
-         */
-        passportSignAsync: function (accountId, challenge) {
-            return passport_native.js_passportSignAsync(accountId, challenge);
-        },
-        /**
-         * Delete a passport account
-         *
-         * @param accountId {string} the account to delete
-         * @return {number} 0, if the account could be deleted, 1, if a unknown error occurred, 2,
-         *         if the access was denied and 3, if the key is already deleted
-         */
-        deletePassportAccount: function (accountId) {
-            return passport_native.js_deletePassportAccount(accountId);
-        },
-        /**
-         * Get the public key
-         *
-         * @param accountId {string} the account id for the public key to get
-         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
-         *         If so, data will contain the public key as hex string
-         */
-        getPublicKey: function (accountId) {
-            return passport_native.js_getPublicKey(accountId);
-        },
-        /**
-         * Get a SHA-256 hash of the public key
-         *
-         * @param accountId {string} the account id for the public key to get
-         * @return {{status: number, ok: boolean, data: string | null}} the status, equals to 0 if everything is ok.
-         *         If so, data will contain the public key hash as hex string
-         */
-        getPublicKeyHash: function (accountId) {
-            return passport_native.js_getPublicKeyHash(accountId);
-        },
-        /**
-         * Verify a challenge signed by passport
-         *
-         * @param challenge {string} the challenge used
-         * @param signature {string} the signature returned
-         * @param publicKey {string} the public key of the application
-         * @return {boolean} if the signature matches
-         */
-        verifySignature: function (challenge, signature, publicKey) {
+        }
+
+        static verifySignature(challenge, signature, publicKey) {
             return passport_native.js_verifySignature(challenge, signature, publicKey);
         }
     },
-    /**
-     * Windows credential storage for node js
-     */
-    credentials: {
-        /**
-         * Write data to the password storage
-         *
-         * @param {string} target the account id
-         * @param {string} user the user name to store
-         * @param {string} password the password to store
-         * @param {boolean} encrypt whether to encrypt the password
-         * @return {boolean} if the operation was successful
-         */
-        write: function (target, user, password, encrypt = true) {
-            return passport_native.js_writeCredential(target, user, password, encrypt);
-        },
-        /**
-         * Read data from the password storage
-         *
-         * @param target {string} the account id
-         * @param {boolean} encrypt whether the password is encrypted
-         * @return {{username: string, password: string} | null} the username and password or null if unsuccessful
-         */
-        read: function (target, encrypt = true) {
-            return passport_native.js_readCredential(target, encrypt);
-        },
-        /**
-         * Remove a entry from the credential storage
-         *
-         * @param target {string} the account id to remove
-         * @return {boolean} if the operation was successful
-         */
-        remove(target) {
-            return passport_native.js_removeCredential(target);
-        },
-        /**
-         * Check if a password entry is encrypted. Throws an error on error
-         *
-         * @param target {string} the account id to check
-         * @return {boolean} if the password is encrypted
-         */
-        isEncrypted: function (target) {
-            return passport_native.js_credentialEncrypted(target);
+    credentialStore: class {
+        constructor(accountId, encryptPasswords = true) {
+            Object.defineProperty(this, 'accountId', {
+                value: accountId,
+                enumerable: true,
+                configurable: true,
+                writable: false
+            });
+
+            Object.defineProperty(this, 'encryptPasswords', {
+                value: encryptPasswords,
+                enumerable: true,
+                configurable: true,
+                writable: false
+            });
+        }
+
+        write(user, password) {
+            return passport_native.js_writeCredential(this.accountId, user, password, this.encryptPasswords);
+        }
+
+        read() {
+            return passport_native.js_readCredential(this.accountId, this.encryptPasswords);
+        }
+
+        remove() {
+            return passport_native.js_removeCredential(this.accountId);
+        }
+
+        isEncrypted() {
+            return passport_native.js_credentialEncrypted(this.accountId);
         }
     },
     /**
@@ -232,18 +171,8 @@ module.exports = {
      * Passport C++ library variables
      */
     passport_lib: {
-        library_dir32: __dirname + "\\passport\\x86\\lib",
-        library_dir64: __dirname + "\\passport\\x64\\lib",
-        library_dir: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\lib",
-        library32: __dirname + "\\passport\\x86\\lib\\NodeMsPassport.lib",
-        library64: __dirname + "\\passport\\x64\\lib\\NodeMsPassport.lib",
-        binary_dir32: __dirname + "\\passport\\x86\\bin",
-        binary_dir64: __dirname + "\\passport\\x64\\bin",
-        binary_dir: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\bin",
-        binary32: __dirname + "\\passport\\x86\\bin\\NodeMsPassport.dll",
-        binary64: __dirname + "\\passport\\x64\\bin\\NodeMsPassport.dll"
-    },
-    include: __dirname + "\\passport\\include",
-    library: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\lib\\NodeMsPassport.lib",
-    binary: __dirname + "\\passport\\" + ((process.arch === 'x64') ? 'x64' : 'x86') + "\\bin\\NodeMsPassport.dll"
+        include_dir: path.join(__dirname, 'cpp_src'),
+        library_dir: path.join(__dirname, 'lib'),
+        library: path.join(__dirname, 'lib', 'NodeMsPassport.lib')
+    }
 }
