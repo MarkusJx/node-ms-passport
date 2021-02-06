@@ -112,8 +112,7 @@ char* convertToPassportResult(Object^ obj, int& outStatus, int& outSize) {
 			static_cast<array<unsigned char>^>(obj->GetType()->GetField("buffer")->GetValue(obj));
 		outSize = buffer->Length;
 		return byteArrayToChar(buffer);
-	}
-	else {
+	} else {
 		return nullptr;
 	}
 }
@@ -146,6 +145,11 @@ void passport::setCSharpDllLocation(const std::string& location) {
 bool passport::passportAvailable() {
 	bool^ ret = callPassportFunction<bool>("PassportAvailable", nullptr);
 	return convertBoolean(ret);
+}
+
+int passport::passportAccountExists(const std::string& accountId) {
+	String^ acc = CharToString(accountId.c_str());
+	return (int)callPassportFunction<int>("PassportAccountExists", gcnew array<Object^>(1) { acc });
 }
 
 char* passport::unmanaged::createPassportKey(int& status, int& outSize, const char* accountId) {

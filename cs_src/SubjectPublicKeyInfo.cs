@@ -20,22 +20,17 @@ using System.Runtime.ConstrainedExecution;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
-namespace Passport.Utils
-{
-    public sealed class SubjectPublicKeyInfo
-    {
+namespace Passport.Utils {
+    public sealed class SubjectPublicKeyInfo {
         const uint STATUS_SUCCESS = 0;
 
         private readonly byte[] _rawCngPublicKeyBlob;
 
-        public SubjectPublicKeyInfo(byte[] subjectPublicKeyInfo)
-        {
-            if (subjectPublicKeyInfo == null)
-            {
+        public SubjectPublicKeyInfo(byte[] subjectPublicKeyInfo) {
+            if (subjectPublicKeyInfo == null) {
                 throw new ArgumentNullException(nameof(subjectPublicKeyInfo));
             }
-            if (subjectPublicKeyInfo.Length == 0)
-            {
+            if (subjectPublicKeyInfo.Length == 0) {
                 throw new ArgumentException("Array cannot be empty.", nameof(subjectPublicKeyInfo));
             }
 
@@ -59,8 +54,7 @@ namespace Passport.Utils
                 pvStructInfo: out publicKeyInfoSafeHandle,
                 pcbStructInfo: out cbPublicKeyInfo);
 
-            if (!success)
-            {
+            if (!success) {
                 throw new CryptographicException($"CryptDecodeObjectEx failed with error code 0x{Marshal.GetLastWin32Error():X8}.");
             }
 
@@ -74,8 +68,7 @@ namespace Passport.Utils
                 pvAuxInfo: IntPtr.Zero,
                 phKey: out bcryptKeyHandle);
 
-            if (!success)
-            {
+            if (!success) {
                 throw new CryptographicException($"CryptImportPublicKeyInfoEx2 failed with error code 0x{Marshal.GetLastWin32Error():X8}.");
             }
 
@@ -94,8 +87,7 @@ namespace Passport.Utils
                 pcbResult: out numBytesRequired,
                 dwFlags: 0);
 
-            if (ntstatus != STATUS_SUCCESS)
-            {
+            if (ntstatus != STATUS_SUCCESS) {
                 throw new CryptographicException($"BCryptExportKey failed with error code 0x{ntstatus:X8}.");
             }
 
@@ -110,16 +102,14 @@ namespace Passport.Utils
                 pcbResult: out numBytesRequired,
                 dwFlags: 0);
 
-            if (ntstatus != STATUS_SUCCESS)
-            {
+            if (ntstatus != STATUS_SUCCESS) {
                 throw new CryptographicException($"BCryptExportKey failed with error code 0x{ntstatus:X8}.");
             }
 
             bcryptKeyHandle.Dispose(); // no longer need this
 
             // resize the CNG key buffer if we overallocated
-            if (numBytesRequired != rawCngKey.Length)
-            {
+            if (numBytesRequired != rawCngKey.Length) {
                 byte[] tempBuffer = new byte[numBytesRequired];
                 Buffer.BlockCopy(rawCngKey, 0, tempBuffer, 0, tempBuffer.Length);
                 rawCngKey = tempBuffer;
@@ -129,47 +119,39 @@ namespace Passport.Utils
             _rawCngPublicKeyBlob = rawCngKey;
         }
 
-        public CngKey GetPublicKey()
-        {
+        public CngKey GetPublicKey() {
             return CngKey.Import(_rawCngPublicKeyBlob, CngKeyBlobFormat.GenericPublicBlob);
         }
 
-        private sealed class SafeBCryptKeyHandle : SafeHandleZeroOrMinusOneIsInvalid
-        {
+        private sealed class SafeBCryptKeyHandle : SafeHandleZeroOrMinusOneIsInvalid {
             private SafeBCryptKeyHandle() : base(ownsHandle: true) { }
 
-            protected override bool ReleaseHandle()
-            {
+            protected override bool ReleaseHandle() {
                 return (NativeMethods.BCryptDestroyKey(handle) == STATUS_SUCCESS);
             }
         }
 
-        private sealed class SafeLocalAllocHandle : SafeHandleZeroOrMinusOneIsInvalid
-        {
+        private sealed class SafeLocalAllocHandle : SafeHandleZeroOrMinusOneIsInvalid {
             private SafeLocalAllocHandle() : base(ownsHandle: true) { }
 
-            public static SafeLocalAllocHandle Alloc(int cb)
-            {
+            public static SafeLocalAllocHandle Alloc(int cb) {
                 SafeLocalAllocHandle handle = new SafeLocalAllocHandle();
                 handle.AllocCore(cb);
                 return handle;
             }
 
             [ReliabilityContract(Consistency.WillNotCorruptState, Cer.MayFail)]
-            private void AllocCore(int cb)
-            {
+            private void AllocCore(int cb) {
                 SetHandle(Marshal.AllocHGlobal(cb));
             }
 
-            protected override bool ReleaseHandle()
-            {
+            protected override bool ReleaseHandle() {
                 Marshal.FreeHGlobal(handle);
                 return true;
             }
         }
 
-        private static class NativeMethods
-        {
+        private static class NativeMethods {
             // https://msdn.microsoft.com/en-us/library/windows/desktop/aa379912(v=vs.85).aspx
             [DllImport("crypt32.dll", CallingConvention = CallingConvention.Winapi, SetLastError = true)]
             internal static extern bool CryptDecodeObjectEx(

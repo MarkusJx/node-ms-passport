@@ -62,6 +62,8 @@ export type credentialReadResult = {
 export class passport {
     // The id of the passport account
     readonly accountId: string;
+    // Whether the passport account exists
+    accountExists: boolean;
 
     /**
      * Create a passport instance
@@ -126,6 +128,13 @@ export class passport {
      *         If so, data will contain the public key hash as hex string
      */
     getPublicKeyHash(): passportResult;
+
+    /**
+     * Check if a passport account exists
+     * 
+     * @param accountId the id of the account to check
+     */
+    static passportAccountExists(accountId: string): boolean;
 
     /**
      * Check if ms passport is available on this machine

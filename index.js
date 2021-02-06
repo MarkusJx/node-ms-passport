@@ -44,6 +44,7 @@ passport_native.js_setCSharpDllLocation(path.join(__dirname, 'bin/'));
 module.exports = {
     passport: class {
         constructor(accountId) {
+            this.accountExists = this.constructor.passportAccountExists(accountId);
             Object.defineProperty(this, 'accountId', {
                 value: accountId,
                 enumerable: true,
@@ -53,31 +54,60 @@ module.exports = {
         }
 
         createPassportKey() {
-            return passport_native.js_createPassportKey(this.accountId);
+            const res = passport_native.js_createPassportKey(this.accountId);
+            if (res.status === 0) this.accountExists = true;
+
+            return res;
         }
 
-        createPassportKeyAsync() {
-            return passport_native.js_createPassportKeyAsync(this.accountId);
+        async createPassportKeyAsync() {
+            const res = await passport_native.js_createPassportKeyAsync(this.accountId);
+            if (res.status === 0) this.accountExists = true;
+
+            return res;
         }
 
         passportSign(challenge) {
+            if (!this.accountExists) throw new Error("The passport account does not exist");
             return passport_native.js_passportSign(this.accountId, challenge);
         }
 
         passportSignAsync(challenge) {
+            if (!this.accountExists) throw new Error("The passport account does not exist");
             return passport_native.js_passportSignAsync(this.accountId, challenge);
         }
 
         deletePassportAccount() {
-            return passport_native.js_deletePassportAccount(this.accountId);
+            if (!this.accountExists) throw new Error("The passport account does not exist");
+
+            const res = passport_native.js_deletePassportAccount(this.accountId);
+            if (res === 0) this.accountExists = false;
+
+            return res;
         }
 
         getPublicKey() {
+            if (!this.accountExists) throw new Error("The passport account does not exist");
             return passport_native.js_getPublicKey(this.accountId);
         }
 
         getPublicKeyHash() {
+            if (!this.accountExists) throw new Error("The passport account does not exist");
             return passport_native.js_getPublicKeyHash(this.accountId);
+        }
+
+        static passportAccountExists(accountId) {
+            const res = passport_native.js_passportAccountExists(accountId);
+            switch (res) {
+                case 0:
+                    return true;
+                case 1:
+                    return false;
+                case 2:
+                    throw new Error("An error occurred while trying to check if a passport account exists");
+                default:
+                    throw new Error("An unknown error occurred");
+            };
         }
 
         static passportAvailable() {

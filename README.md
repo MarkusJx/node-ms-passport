@@ -65,6 +65,11 @@ if (res !== 0) {
 }
 ```
 
+#### Check if a passport account exists
+```js
+const accountExists = passport.passportAccountExists("accountId");
+```
+
 #### Async operations
 Asynchronous operations are supported for use in ui applications to not freeze the app while it waits for
 user input. User input is required on key creation and on signing a challenge.
