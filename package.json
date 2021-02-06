@@ -22,9 +22,7 @@
   "author": "MarkusJx",
   "license": "MIT",
   "devDependencies": {
-    "cmake-js": "^6.1.0",
-    "mocha": "^8.2.1",
-    "node-addon-api": "^3.1.0"
+    "mocha": "^8.2.1"
   },
   "main": "index.js",
   "os": [
@@ -37,5 +35,9 @@
   "cmake-js": {
     "runtime": "electron",
     "runtimeVersion": "9.0.0"
+  },
+  "dependencies": {
+    "cmake-js": "^6.1.0",
+    "node-addon-api": "^3.1.0"
   }
 }
