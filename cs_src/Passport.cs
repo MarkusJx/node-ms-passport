@@ -19,72 +19,38 @@ namespace CSNodeMsPassport {
         private const int NTE_PERM = unchecked((int)0x80090010);
 
         /// <summary>
-        /// A passport operation result
-        /// </summary>
-        public struct PassportResult {
-            /// <summary>
-            /// The buffer containing the actual operation result.
-            /// Will be set to null, if the operation failed.
-            /// </summary>
-            public byte[] buffer;
-
-            /// <summary>
-            /// The status of the operation.<br></br>
-            /// Default codes:<br></br>
-            /// 0: The operation was successful<br></br>
-            /// 1: An unknown error occurred<br></br>
-            /// 2: The user needs to create a PIN<br></br>
-            /// 3: The user cancelled the passport enrollment process
-            /// </summary>
-            public int status;
-        }
-
-        /// <summary>
         /// Create a passport key
         /// </summary>
+        /// <exception cref="UserCancelledException"></exception>
+        /// <exception cref="MissingPinException"></exception>
+        /// <exception cref="UserPrefersPasswordException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <param name="accountId">The account id</param>
-        /// <returns>A passport result, storing the accounts public key in its buffer</returns>
-        public static PassportResult CreatePassportKey(string accountId) {
-            try {
-                // Run KeyCredentialManager.RequestCreateAsync to create the account.
-                // Overwrites any existing accounts
-                Task<KeyCredentialRetrievalResult> task = Task.Run(async () =>
-                    await KeyCredentialManager.RequestCreateAsync(accountId, KeyCredentialCreationOption.ReplaceExisting));
-                // Get the result
-                KeyCredentialRetrievalResult keyCreationResult = task.Result;
+        public static void CreatePassportKey(string accountId) {
+            // Run KeyCredentialManager.RequestCreateAsync to create the account.
+            // Overwrites any existing accounts
+            Task<KeyCredentialRetrievalResult> task = Task.Run(async () =>
+                await KeyCredentialManager.RequestCreateAsync(accountId, KeyCredentialCreationOption.ReplaceExisting));
+            // Get the result
+            KeyCredentialRetrievalResult keyCreationResult = task.Result;
 
-                // Create a new PassportResult instance
-                PassportResult res = new PassportResult();
-
-                // Check the KeyCredentialRetrievalResult status
-                if (keyCreationResult.Status == KeyCredentialStatus.Success) {
-                    // Get the public key
-                    KeyCredential userKey = keyCreationResult.Credential;
-                    IBuffer publicKey = userKey.RetrievePublicKey();
-
-                    // Copy the public key to the PassportResult's buffer
-                    CryptographicBuffer.CopyToByteArray(publicKey, out res.buffer);
-                    // The operation was successful
-                    res.status = 0;
-                } else if (keyCreationResult.Status == KeyCredentialStatus.UserCanceled) {
-                    // User cancelled the Passport enrollment process
-                    res.status = 3;
-                } else if (keyCreationResult.Status == KeyCredentialStatus.NotFound) {
-                    // User needs to create PIN
-                    res.status = 2;
-                } else {
-                    // An unknown error occurred
-                    res.status = 1;
-                }
-
-                // Return the PassportResult
-                return res;
-            } catch (Exception) {
-                // Return a PassportResult instance
-                return new PassportResult {
-                    status = 1,
-                    buffer = null
-                };
+            // Check the KeyCredentialRetrievalResult status
+            if (keyCreationResult.Status == KeyCredentialStatus.Success) {
+                // The operation was successful
+                return;
+            } else if (keyCreationResult.Status == KeyCredentialStatus.UserCanceled) {
+                // User cancelled the Passport enrollment process
+                throw new UserCancelledException();
+            } else if (keyCreationResult.Status == KeyCredentialStatus.NotFound) {
+                // User needs to create PIN
+                throw new MissingPinException();
+            } else if (keyCreationResult.Status == KeyCredentialStatus.UserPrefersPassword) {
+                // The user prefers a password
+                throw new UserPrefersPasswordException();
+            } else {
+                // An unknown error occurred
+                throw new UnknownException();
             }
         }
 
@@ -93,59 +59,50 @@ namespace CSNodeMsPassport {
         /// </summary>
         /// <param name="accountId">The id of the account to use</param>
         /// <param name="challenge">The challenge to sign</param>
+        /// <exception cref="SignOperationFailedException"></exception>
+        /// <exception cref="UserCancelledException"></exception>
+        /// <exception cref="AccountNotFoundException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <returns>A passport result, storing the signed challenge in its buffer</returns>
-        public static PassportResult PassportSign(string accountId, byte[] challenge) {
-            try {
-                // Try to open the account
-                Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
-                KeyCredentialRetrievalResult retrieveResult = task.Result;
+        public static byte[] PassportSign(string accountId, byte[] challenge) {
+            // Try to open the account
+            Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
+            KeyCredentialRetrievalResult retrieveResult = task.Result;
 
-                // Create a new PassportResult instance
-                PassportResult res = new PassportResult();
+            // Check the KeyCredentialRetrievalResult status
+            if (retrieveResult.Status == KeyCredentialStatus.Success) {
+                // Get the users credential
+                KeyCredential userCredential = retrieveResult.Credential;
 
-                // Check the KeyCredentialRetrievalResult status
-                if (retrieveResult.Status == KeyCredentialStatus.Success) {
-                    // Get the users credential
-                    KeyCredential userCredential = retrieveResult.Credential;
+                // Convert the challenge to an IBuffer and sign the challenge
+                IBuffer challengeBuffer = CryptographicBuffer.CreateFromByteArray(challenge);
+                Task<KeyCredentialOperationResult> opTask = Task.Run(async () =>
+                    await userCredential.RequestSignAsync(challengeBuffer));
+                KeyCredentialOperationResult opResult = opTask.Result;
 
-                    // Convert the challenge to an IBuffer and sign the challenge
-                    IBuffer challengeBuffer = CryptographicBuffer.CreateFromByteArray(challenge);
-                    Task<KeyCredentialOperationResult> opTask = Task.Run(async () =>
-                        await userCredential.RequestSignAsync(challengeBuffer));
-                    KeyCredentialOperationResult opResult = opTask.Result;
+                // Check the KeyCredentialOperationResult status
+                if (opResult.Status == KeyCredentialStatus.Success) {
+                    // Get the signature
+                    IBuffer signatureBuffer = opResult.Result;
 
-                    // Check the KeyCredentialOperationResult status
-                    if (opResult.Status == KeyCredentialStatus.Success) {
-                        // Get the signature
-                        IBuffer signatureBuffer = opResult.Result;
-
-                        // Copy the signature to the PassportResult's buffer
-                        CryptographicBuffer.CopyToByteArray(signatureBuffer, out res.buffer);
-                        // The operation was successful
-                        res.status = 0;
-                    } else {
-                        // The sign operation failed
-                        res.status = -1;
-                    }
-                } else if (retrieveResult.Status == KeyCredentialStatus.UserCanceled) {
-                    // User cancelled the Passport enrollment process
-                    res.status = 3;
-                } else if (retrieveResult.Status == KeyCredentialStatus.NotFound) {
-                    // User needs to create PIN
-                    res.status = 2;
+                    // Copy the signature to the PassportResult's buffer
+                    CryptographicBuffer.CopyToByteArray(signatureBuffer, out byte[] buffer);
+                    // The operation was successful
+                    return buffer;
                 } else {
-                    // An unknown error occurred
-                    res.status = 1;
+                    // The sign operation failed
+                    throw new SignOperationFailedException();
                 }
-
-                // Return the PassportResult
-                return res;
-            } catch (Exception) {
-                // Return a PassportResult instance
-                return new PassportResult {
-                    status = 1,
-                    buffer = null
-                };
+            } else if (retrieveResult.Status == KeyCredentialStatus.UserCanceled) {
+                // User cancelled the Passport enrollment process
+                throw new UserCancelledException();
+            } else if (retrieveResult.Status == KeyCredentialStatus.NotFound) {
+                // The account was not found
+                throw new AccountNotFoundException();
+            } else {
+                // An unknown error occurred
+                throw new UnknownException();
             }
         }
 
@@ -153,68 +110,61 @@ namespace CSNodeMsPassport {
         /// Get the public key of the windiws hello account
         /// </summary>
         /// <param name="accountId">The id of the account to use</param>
+        /// <exception cref="UserCancelledException"></exception>
+        /// <exception cref="AccountNotFoundException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <returns>A passport result, storing the public key in its buffer</returns>
-        public static PassportResult GetPublicKey(string accountId) {
-            try {
-                // Try to get the account
-                Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
-                KeyCredentialRetrievalResult retrieveResult = task.Result;
+        public static byte[] GetPublicKey(string accountId) {
+            // Try to get the account
+            Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
+            KeyCredentialRetrievalResult retrieveResult = task.Result;
 
-                // Create a new PassportResult instance
-                PassportResult res = new PassportResult();
+            // Check the KeyCredentialRetrievalResult status
+            if (retrieveResult.Status == KeyCredentialStatus.Success) {
+                // Get the user's credential
+                KeyCredential userCredential = retrieveResult.Credential;
 
-                // Check the KeyCredentialRetrievalResult status
-                if (retrieveResult.Status == KeyCredentialStatus.Success) {
-                    // Get the user's credential
-                    KeyCredential userCredential = retrieveResult.Credential;
+                // Get the public key
+                IBuffer publicKey = userCredential.RetrievePublicKey();
 
-                    // Get the public key
-                    IBuffer publicKey = userCredential.RetrievePublicKey();
+                // Copy the public key to the PassportResult's buffer
+                CryptographicBuffer.CopyToByteArray(publicKey, out byte[] buffer);
 
-                    // Copy the public key to the PassportResult's buffer
-                    CryptographicBuffer.CopyToByteArray(publicKey, out res.buffer);
-                    // The operation was successful
-                    res.status = 0;
-                } else if (retrieveResult.Status == KeyCredentialStatus.UserCanceled) {
-                    // User cancelled the Passport enrollment process
-                    res.status = 3;
-                } else if (retrieveResult.Status == KeyCredentialStatus.NotFound) {
-                    // User needs to create PIN
-                    res.status = 2;
-                } else {
-                    // An unknown error occurred
-                    res.status = 1;
-                }
-
-                // Return the PassportResult
-                return res;
-            } catch (Exception) {
-                // Return a PassportResult instance
-                return new PassportResult {
-                    status = 1,
-                    buffer = null
-                };
+                // The operation was successful
+                return buffer;
+            } else if (retrieveResult.Status == KeyCredentialStatus.UserCanceled) {
+                // User cancelled the Passport enrollment process
+                throw new UserCancelledException();
+            } else if (retrieveResult.Status == KeyCredentialStatus.NotFound) {
+                // The account was not found
+                throw new AccountNotFoundException();
+            } else {
+                // An unknown error occurred
+                throw new UnknownException();
             }
         }
 
         /// <summary>
         /// Get a hashed version of the public key
         /// </summary>
+        /// <exception cref="UserCancelledException"></exception>
+        /// <exception cref="AccountNotFoundException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <param name="accountId">The id of the account to use</param>
-        /// <returns>A passport result,s toring the hashed public key in its buffer</returns>
-        public static PassportResult GetPublicKeyHash(string accountId) {
-            PassportResult res = GetPublicKey(accountId);
-            if (res.status == 0) {
-                // Get a hash provider for the SHA256 algorithm and hash the public key
-                HashAlgorithmProvider hashProvider = HashAlgorithmProvider.OpenAlgorithm(HashAlgorithmNames.Sha256);
-                IBuffer publicKeyHash = hashProvider.HashData(CryptographicBuffer.CreateFromByteArray(res.buffer));
+        /// <returns>A passport result, storing the hashed public key in its buffer</returns>
+        public static byte[] GetPublicKeyHash(string accountId) {
+            byte[] res = GetPublicKey(accountId);
+            // Get a hash provider for the SHA256 algorithm and hash the public key
+            HashAlgorithmProvider hashProvider = HashAlgorithmProvider.OpenAlgorithm(HashAlgorithmNames.Sha256);
+            IBuffer publicKeyHash = hashProvider.HashData(CryptographicBuffer.CreateFromByteArray(res));
 
-                // Copy the hashed public key to the PassportResult's buffer
-                CryptographicBuffer.CopyToByteArray(publicKeyHash, out res.buffer);
-            }
+            // Copy the hashed public key to the PassportResult's buffer
+            CryptographicBuffer.CopyToByteArray(publicKeyHash, out byte[] outBuffer);
 
             // Return the PassportResult
-            return res;
+            return outBuffer;
         }
 
         /// <summary>
@@ -231,8 +181,8 @@ namespace CSNodeMsPassport {
                 // Try to delete the account
                 await KeyCredentialManager.DeleteAsync(accountId);
                 return 0;
-            } catch (Exception ex) {
-                switch (ex.HResult) {
+            } catch (Exception e) {
+                switch (e.HResult) {
                     case NTE_NO_KEY:
                         // Key is already deleted. Ignore this error.
                         return 3;
@@ -248,51 +198,59 @@ namespace CSNodeMsPassport {
 
         /// <summary>
         /// Delete a passport account synchronously.
-        /// Returns zero, if the operation was successful,
-        /// 3 if the key is already deleted,
-        /// 2 if the access was denied and 1 if an unknown
-        /// error occurred
         /// </summary>
+        /// <exception cref="KeyAlreadyDeletedException"></exception>
+        /// <exception cref="AccessDeniedException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <param name="accountId">The id of the account to delete</param>
-        /// <returns>A return code</returns>
-        public static int DeletePassportAccount(string accountId) {
-            try {
-                Task<int> task = DeletePassportAccountAsync(accountId);
-                return task.Result;
-            } catch (Exception) {
-                return 1;
+        public static void DeletePassportAccount(string accountId) {
+            Task<int> task = DeletePassportAccountAsync(accountId);
+            switch (task.Result) {
+                case 0:
+                    return;
+                case 3:
+                    // The key is already deleted
+                    throw new KeyAlreadyDeletedException();
+                case 2:
+                    // The access was denied
+                    throw new AccessDeniedException();
+                default:
+                    // An unknown error occurred
+                    throw new UnknownException();
             }
         }
 
         /// <summary>
-        /// Check if a ms passport account exists<br></br>
-        /// Return codes:<br></br>
-        /// 0: The account was found<br></br>
-        /// 1: The account was not found<br></br>
-        /// 2: An error occcurred
+        /// Check if a ms passport account exists
         /// </summary>
+        /// <exception cref="UserCancelledException"></exception>
+        /// <exception cref="UserPrefersPasswordException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <param name="accountId">The id of the account to check</param>
-        /// <returns>A return code</returns>
-        public static int PassportAccountExists(string accountId) {
-            try {
-                // Try to get the account
-                Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
-                KeyCredentialRetrievalResult openKeyResult = task.Result;
+        /// <returns>true if the account exists</returns>
+        public static bool PassportAccountExists(string accountId) {
+            // Try to get the account
+            Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
 
-                // Check the result
-                if (openKeyResult.Status == KeyCredentialStatus.Success) {
+            // Check the result
+            switch (task.Result.Status) {
+                case KeyCredentialStatus.Success:
                     // The account was found
-                    return 0;
-                } else if (openKeyResult.Status == KeyCredentialStatus.NotFound) {
+                    return true;
+                case KeyCredentialStatus.NotFound:
                     // The account was not found
-                    return 1;
-                } else {
-                    // An unknown error occurred
-                    return 2;
-                }
-            } catch (Exception) {
-                // An unknown error occurred
-                return 2;
+                    return false;
+                case KeyCredentialStatus.UserCanceled:
+                    // The operation was cancelled by the user
+                    throw new UserCancelledException();
+                case KeyCredentialStatus.UserPrefersPassword:
+                    // The user prefers a password
+                    throw new UserPrefersPasswordException();
+                default:
+                    // An unknwon error occurred
+                    throw new UnknownException();
             }
         }
 
@@ -302,33 +260,27 @@ namespace CSNodeMsPassport {
         /// <param name="challenge">The challenge</param>
         /// <param name="signature">The signature returned by a client</param>
         /// <param name="publicKey">The public key of the client</param>
+        /// <exception cref="ArgumentException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
         /// <returns>true, if the signature matches, false otherwise</returns>
         public static bool VerifyChallenge(byte[] challenge, byte[] signature, byte[] publicKey) {
             // Validate that the original challenge was signed using the corresponding private key.
-            try {
-                CngKey pubCngKey = new SubjectPublicKeyInfo(publicKey).GetPublicKey();
+            CngKey pubCngKey = new SubjectPublicKeyInfo(publicKey).GetPublicKey();
 
-                // Validate that the original challenge was signed using the corresponding private key.
-                using (RSACng pubKey = new RSACng(pubCngKey)) {
-                    return pubKey.VerifyData(challenge, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
-                }
-            } catch (Exception) {
-                // The operation failed, just return false
-                return false;
-            }
+            // Validate that the original challenge was signed using the corresponding private key.
+            RSACng pubKey = new RSACng(pubCngKey);
+            return pubKey.VerifyData(challenge, signature, HashAlgorithmName.SHA256, RSASignaturePadding.Pkcs1);
         }
 
         /// <summary>
         /// Check if passport is available on this system
         /// </summary>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="AggregateException"></exception>
         /// <returns>true if passport is available</returns>
         public static bool PassportAvailable() {
-            try {
-                Task<bool> task = Task.Run(async () => await KeyCredentialManager.IsSupportedAsync());
-                return task.Result;
-            } catch (Exception) {
-                return false;
-            }
+            Task<bool> task = Task.Run(async () => await KeyCredentialManager.IsSupportedAsync());
+            return task.Result;
         }
     }
 }

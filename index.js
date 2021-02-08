@@ -39,9 +39,50 @@ const path = require('path');
 const passport_native = require(path.join(__dirname, 'bin', 'passport.node'));
 
 // Set the location for the C# dll
-passport_native.js_setCSharpDllLocation(path.join(__dirname, 'bin/'));
+passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
+
+class PassportError extends Error {
+    #code = -1;
+
+    constructor(message, code) {
+        super(message);
+        this.name = "PassportError";
+        this.#code = code;
+    }
+
+    getCode() {
+        return this.#code;
+    }
+}
+
+/**
+ * Rethrow an error
+ * 
+ * @param {Error} e the error to rethrow
+ */
+function rethrowError(e) {
+    const regex = /^\w+#\d{0,2}$/g;
+    if (regex.test(e.message)) {
+        const parts = e.message.split('#');
+        throw new PassportError(parts[0], Number(parts[1]));
+    } else {
+        throw e;
+    }
+}
 
 module.exports = {
+    PassportError: PassportError,
+    errorCodes: {
+        ERR_ANY: -1,
+        ERR_UNKNOWN: 1,
+        ERR_MISSING_PIN: 2,
+        ERR_USER_CANCELLED: 3,
+        ERR_USER_PREFERS_PASSWORD: 4,
+        ERR_ACCOUNT_NOT_FOUND: 5,
+        ERR_SIGN_OP_FAILED: 6,
+        ERR_KEY_ALREADY_DELETED: 7,
+        ERR_ACCESS_DENIED: 8
+    },
     passport: class {
         constructor(accountId) {
             this.accountExists = this.constructor.passportAccountExists(accountId);
@@ -53,69 +94,73 @@ module.exports = {
             });
         }
 
-        createPassportKey() {
-            const res = passport_native.js_createPassportKey(this.accountId);
-            if (res.status === 0) this.accountExists = true;
-
-            return res;
+        async createPassportKey() {
+            try {
+                await passport_native.createPassportKey(this.accountId);
+                this.accountExists = true;
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
-        async createPassportKeyAsync() {
-            const res = await passport_native.js_createPassportKeyAsync(this.accountId);
-            if (res.status === 0) this.accountExists = true;
-
-            return res;
-        }
-
-        passportSign(challenge) {
+        async passportSign(challenge) {
             if (!this.accountExists) throw new Error("The passport account does not exist");
-            return passport_native.js_passportSign(this.accountId, challenge);
+            try {
+                return await passport_native.passportSign(this.accountId, challenge);
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
-        passportSignAsync(challenge) {
+        async deletePassportAccount() {
             if (!this.accountExists) throw new Error("The passport account does not exist");
-            return passport_native.js_passportSignAsync(this.accountId, challenge);
+            try {
+                await passport_native.deletePassportAccount(this.accountId);
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
-        deletePassportAccount() {
+        async getPublicKey() {
             if (!this.accountExists) throw new Error("The passport account does not exist");
-
-            const res = passport_native.js_deletePassportAccount(this.accountId);
-            if (res === 0) this.accountExists = false;
-
-            return res;
+            try {
+                return await passport_native.getPublicKey(this.accountId);
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
-        getPublicKey() {
+        async getPublicKeyHash() {
             if (!this.accountExists) throw new Error("The passport account does not exist");
-            return passport_native.js_getPublicKey(this.accountId);
-        }
-
-        getPublicKeyHash() {
-            if (!this.accountExists) throw new Error("The passport account does not exist");
-            return passport_native.js_getPublicKeyHash(this.accountId);
+            try {
+                return await passport_native.getPublicKeyHash(this.accountId);
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
         static passportAccountExists(accountId) {
-            const res = passport_native.js_passportAccountExists(accountId);
-            switch (res) {
-                case 0:
-                    return true;
-                case 1:
-                    return false;
-                case 2:
-                    throw new Error("An error occurred while trying to check if a passport account exists");
-                default:
-                    throw new Error("An unknown error occurred");
-            };
+            try {
+                return passport_native.passportAccountExists(accountId);
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
         static passportAvailable() {
-            return passport_native.js_passportAvailable();
+            try {
+                return passport_native.passportAvailable();
+            } catch (e) {
+                rethrowError(e);
+            }
         }
 
-        static verifySignature(challenge, signature, publicKey) {
-            return passport_native.js_verifySignature(challenge, signature, publicKey);
+        static async verifySignature(challenge, signature, publicKey) {
+            try {
+                return await passport_native.verifySignature(challenge, signature, publicKey);
+            } catch (e) {
+                rethrowError(e);
+            }
         }
     },
     credentialStore: class {
@@ -135,20 +180,20 @@ module.exports = {
             });
         }
 
-        write(user, password) {
-            return passport_native.js_writeCredential(this.accountId, user, password, this.encryptPasswords);
+        async write(user, password) {
+            return await passport_native.writeCredential(this.accountId, user, password, this.encryptPasswords);
         }
 
-        read() {
-            return passport_native.js_readCredential(this.accountId, this.encryptPasswords);
+        async read() {
+            return await passport_native.readCredential(this.accountId, this.encryptPasswords);
         }
 
-        remove() {
-            return passport_native.js_removeCredential(this.accountId);
+        async remove() {
+            return await passport_native.removeCredential(this.accountId);
         }
 
-        isEncrypted() {
-            return passport_native.js_credentialEncrypted(this.accountId);
+        async isEncrypted() {
+            return await passport_native.credentialEncrypted(this.accountId);
         }
     },
     /**
@@ -161,8 +206,8 @@ module.exports = {
          * @param data {string} the data to encrypt
          * @returns {string} the result as hex string or null if unsuccessful
          */
-        encrypt: function (data) {
-            return passport_native.js_encryptPassword(data);
+        encrypt: async function (data) {
+            return await passport_native.encryptPassword(data);
         },
         /**
          * Decrypt a password using CredUnprotect. Throws on error
@@ -170,8 +215,8 @@ module.exports = {
          * @param data {string} the data to decrypt as hex string
          * @returns {string} the result as string or null if unsuccessful
          */
-        decrypt: function(data) {
-            return passport_native.js_decryptPassword(data);
+        decrypt: async function (data) {
+            return await passport_native.decryptPassword(data);
         },
         /**
          * Check if data was encrypted using CredProtect. Throws an error on error
@@ -179,8 +224,8 @@ module.exports = {
          * @param data {string} the data as hex string
          * @returns {boolean} if the password is encrypted
          */
-        isEncrypted: function (data) {
-            return passport_native.js_passwordEncrypted(data);
+        isEncrypted: async function (data) {
+            return await passport_native.passwordEncrypted(data);
         }
     },
     /**
@@ -194,7 +239,7 @@ module.exports = {
          * @return {string} the random bytes as hex string
          */
         generateRandom: function (length) {
-            return passport_native.js_generateRandom(length);
+            return passport_native.generateRandom(length);
         }
     },
     /**

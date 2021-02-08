@@ -2,33 +2,20 @@ const assert = require("assert");
 const { passport, passport_utils, passwords, credentialStore } = require('./index');
 
 describe('Passport test', function () {
-    let createRes, publicKey, challenge, signed;
+    let publicKey, challenge, signed;
     it('Checking if passport is available', () => {
         assert(passport.passportAvailable());
     });
 
     const pass = new passport("test");
-    it('Creating passport key', function () {
+    it('Creating passport key', async function () {
         this.timeout(0); // No timeout since this requires user interaction
-        createRes = pass.createPassportKey();
-        assert.strictEqual(createRes.status, 0);
+        await pass.createPassportKey();
     });
 
-    it('Deleting passport key', () => {
-        const deleted = pass.deletePassportAccount();
-        assert.strictEqual(deleted, 0);
-    });
-
-    it('Creating passport key asynchronously', async function () {
-        this.timeout(0);
-        createRes = await pass.createPassportKeyAsync();
-        assert.strictEqual(createRes.status, 0);
-    });
-
-    it('Checking public key', () => {
-        publicKey = pass.getPublicKey();
-        assert.strictEqual(publicKey.status, 0);
-        assert.strictEqual(publicKey.data, createRes.data);
+    it('Checking public key', async () => {
+        publicKey = await pass.getPublicKey();
+        assert.notStrictEqual(publicKey, null);
     });
 
     it('Generating challenge', function () {
@@ -36,102 +23,91 @@ describe('Passport test', function () {
         assert.strictEqual(challenge.length, 50);
     });
 
-    it('Signing challenge', function () {
+    it('Signing challenge', async function () {
         this.timeout(0); // No timeout since this requires user interaction
-        signed = pass.passportSign(challenge);
-        assert.strictEqual(signed.status, 0);
+        signed = await pass.passportSign(challenge);
+        assert.notStrictEqual(signed, null);
     });
 
-    it('Verifying signature', function () {
-        const signatureMatches = passport.verifySignature(challenge, signed.data, createRes.data);
+    it('Verifying signature', async function () {
+        const signatureMatches = await passport.verifySignature(challenge, signed, publicKey);
         assert(signatureMatches);
     });
 
-    it('Signing challenge asynchronously', async function () {
-        this.timeout(0);
-        signed = await pass.passportSignAsync(challenge);
-        assert.strictEqual(signed.status, 0);
-    });
-
-    it('Verifying signature', function () {
-        const signatureMatches = passport.verifySignature(challenge, signed.data, createRes.data);
-        assert(signatureMatches);
-    });
-
-    it('Deleting passport key', () => {
-        const deleted = pass.deletePassportAccount();
-        assert.strictEqual(deleted, 0);
+    it('Deleting passport key', async () => {
+        await pass.deletePassportAccount();
+        assert.strictEqual(passport.passportAccountExists("test"), false);
     });
 });
 
 describe('Credential manager test', function () {
     describe('with encryption', () => {
         const cred = new credentialStore("test/test", true);
-        it('Credential write', function () {
-            assert(cred.write("test", "testPassword"));
+        it('Credential write', async function () {
+            assert(await cred.write("test", "testPassword"));
         });
 
-        it('Credential read', () => {
-            const read = cred.read();
+        it('Credential read', async () => {
+            const read = await cred.read();
             assert.notStrictEqual(read, null);
             assert.strictEqual(read.username, "test");
             assert.strictEqual(read.password, "testPassword");
         });
 
-        it('Password encrypted check', () => {
-            const encrypted = cred.isEncrypted();
+        it('Password encrypted check', async () => {
+            const encrypted = await cred.isEncrypted();
             assert(encrypted);
         });
 
-        it('Credential delete', () => {
-            assert(cred.remove());
+        it('Credential delete', async () => {
+            assert(await cred.remove());
         });
     });
 
     describe('without encryption', function () {
         const cred = new credentialStore("test/testRaw", false);
-        it('Credential write', () => {
-            assert(cred.write("test", "testPassword"));
+        it('Credential write', async () => {
+            assert(await cred.write("test", "testPassword"));
         });
 
-        it('Credential read', () => {
-            const read = cred.read();
+        it('Credential read', async () => {
+            const read = await cred.read();
             assert.notStrictEqual(read, null);
             assert.strictEqual(read.username, "test");
             assert.strictEqual(read.password, "testPassword");
         });
 
-        it('Password encrypted check', () => {
-            const encrypted = cred.isEncrypted();
+        it('Password encrypted check', async () => {
+            const encrypted = await cred.isEncrypted();
             assert.strictEqual(encrypted, false);
         });
 
-        it('Credential delete', () => {
-            assert(cred.remove());
+        it('Credential delete', async () => {
+            assert(await cred.remove());
         });
     });
 });
 
 describe('Password encryption', function () {
     let data;
-    it('Encrypt password', () => {
-        data = passwords.encrypt("TestPassword");
+    it('Encrypt password', async () => {
+        data = await passwords.encrypt("TestPassword");
         assert.notStrictEqual(data, null);
     });
 
-    it('Check if encrypted', () => {
-        let encrypted = passwords.isEncrypted(data);
+    it('Check if encrypted', async () => {
+        let encrypted = await passwords.isEncrypted(data);
         assert(encrypted);
     });
 
-    it('Check if throws on invalid hex string', function () {
-        assert.throws(function () {
-            passwords.isEncrypted("data");
-        }, new Error("Invalid character: 't' is not a valid hex digit"));
+    it('Check if throws on invalid hex string', function (done) {
+        passwords.isEncrypted("data").then(() => {
+            done("Should have thrown an exception");
+        }, () => done());
     });
 
-    it('Decrypt password', () => {
-        data = passwords.decrypt(data);
+    it('Decrypt password', async () => {
+        data = await passwords.decrypt(data);
         assert.strictEqual(data, "TestPassword");
     });
 });

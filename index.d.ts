@@ -24,23 +24,6 @@
  * SOFTWARE.
  */
 
-import { passport_lib } from ".";
-
-/**
- * A passport operation result
- */
-export type passportResult = {
-    // The status. Equals to zero, if everything was ok,
-    // if it is 1, an unknown error occurred, if it is
-    // 2, the user needs to create a pin,
-    // 3 if the user cacelled the process
-    status: number;
-    // Whether the function call was successful
-    ok: boolean;
-    // The (hex) data of the call or null, if it failed
-    data: string | null;
-};
-
 /**
  * A result from a credential read operation
  */
@@ -50,6 +33,24 @@ export type credentialReadResult = {
     // The password
     password: string;
 };
+
+export const errorCodes = {
+    ERR_ANY: -1,
+    ERR_UNKNOWN: 1,
+    ERR_MISSING_PIN: 2,
+    ERR_USER_CANCELLED: 3,
+    ERR_USER_PREFERS_PASSWORD: 4,
+    ERR_ACCOUNT_NOT_FOUND: 5,
+    ERR_SIGN_OP_FAILED: 6,
+    ERR_KEY_ALREADY_DELETED: 7,
+    ERR_ACCESS_DENIED: 8
+}
+
+export class PassportError extends Error {
+    constructor(message: string, code: number);
+
+    getCode(): number;
+}
 
 /**
  * Microsoft passport for node js
@@ -73,61 +74,39 @@ export class passport {
     constructor(accountId: string);
 
     /**
-         * Create a microsoft passport key
-         *
-         * @return the status, equals to 0 if everything is ok. If so, data will contain the public key as hex string
-         */
-    createPassportKey(): passportResult;
-
-    /**
      * Create a microsoft passport key asynchronously
      *
      * @return the status, equals to 0 if everything is ok.
      *         If so, data will contain the public key as hex string
      */
-    createPassportKeyAsync(): Promise<passportResult>;
+    async createPassportKey(): Promise<void>;
 
     /**
      * Sign a challenge
      *
      * @param challenge the challenge to sign
-     * @return the status, equals to 0 if everything is ok.
-     *         If so, data will contain the signature as hex string
+     * @return the signature as a hex string
      */
-    passportSign(challenge: string): passportResult;
-
-    /**
-     * Sign a challenge asynchronously
-     *
-     * @param challenge the challenge to sign
-     * @return the status, equals to 0 if everything is ok.
-     *         If so, data will contain the signature as hex string
-     */
-    passportSignAsync(challenge: string): Promise<passportResult>;
+    async passportSign(challenge: string): Promise<string>;
 
     /**
      * Delete a passport account
-     *
-     * @return 0, if the account could be deleted, 1, if a unknown error occurred, 2,
-     *         if the access was denied and 3, if the key is already deleted
      */
-    deletePassportAccount(): number;
+    async deletePassportAccount(): Promise<void>;
 
     /**
      * Get the public key
      *
-     * @return the status, equals to 0 if everything is ok.
-     *         If so, data will contain the public key as hex string
+     * @return the public key as a hex string
      */
-    getPublicKey(): passportResult;
+    async getPublicKey(): Promise<string>;
 
     /**
      * Get a SHA-256 hash of the public key
      *
-     * @return the status, equals to 0 if everything is ok.
-     *         If so, data will contain the public key hash as hex string
+     * @return the hashed public key as a string
      */
-    getPublicKeyHash(): passportResult;
+    async getPublicKeyHash(): Promise<string>;
 
     /**
      * Check if a passport account exists
@@ -151,7 +130,7 @@ export class passport {
      * @param publicKey the public key of the application
      * @return if the signature matches
      */
-    static verifySignature(challenge: string, signature: string, publicKey: string): boolean;
+    static async verifySignature(challenge: string, signature: string, publicKey: string): Promise<boolean>;
 };
 
 /**
@@ -178,28 +157,28 @@ export class credentialStore {
      * @param password the password to store
      * @return if the operation was successful
      */
-    write(user: string, password: string): boolean;
+    async write(user: string, password: string): Promise<boolean>;
 
     /**
      * Read data from the password storage
      *
      * @return the username and password or null if unsuccessful
      */
-    read(): credentialReadResult | null;
+    async read(): Promise<credentialReadResult | null>;
 
     /**
      * Remove a entry from the credential storage
      *
      * @return if the operation was successful
      */
-    remove(): boolean;
+    async remove(): Promise<boolean>;
 
     /**
      * Check if a password entry is encrypted. Throws an error on error
      *
      * @return if the password is encrypted
      */
-    isEncrypted(): boolean;
+    async isEncrypted(): Promise<boolean>;
 };
 
 /**
@@ -212,7 +191,7 @@ export namespace passwords {
      * @param data the data to encrypt
      * @returns the result as hex string or null if unsuccessful
      */
-    function encrypt(data: string): string;
+    async function encrypt(data: string): Promise<string>;
 
     /**
      * Decrypt a password using CredUnprotect. Throws on error
@@ -220,7 +199,7 @@ export namespace passwords {
      * @param data the data to decrypt as hex string
      * @returns the result as string or null if unsuccessful
      */
-    function decrypt(data: string): string;
+    async function decrypt(data: string): Promise<string>;
 
     /**
      * Check if data was encrypted using CredProtect. Throws an error on error
@@ -228,7 +207,7 @@ export namespace passwords {
      * @param data the data as hex string
      * @returns if the password is encrypted
      */
-    function isEncrypted(data: string): boolean;
+    async function isEncrypted(data: string): Promise<boolean>;
 };
 
 /**

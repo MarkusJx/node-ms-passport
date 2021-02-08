@@ -15,6 +15,7 @@
  * The dotNetBridge namespace
  */
 namespace nodeMsPassport {
+	using byte = unsigned char;
 	namespace util {
 		/**
 		 * zallocator struct
@@ -168,36 +169,33 @@ namespace nodeMsPassport {
 	 * A namespace for MS passport operations
 	 */
 	namespace passport {
-		/**
-		 * Utility namespace
-		 */
-		namespace util {
-			using byte = unsigned char;
-			using secure_byte_vector = ::nodeMsPassport::secure_vector<byte>;
-		}
+		// A byte
+		using byte = unsigned char;
 
 		/**
-		 * The unmanaged namespace. Functions in here should not be used.
+		 * A passport exception
 		 */
-		namespace unmanaged {
-			void freeData(char* data);
+		class passportException : public std::exception {
+		public:
+			/**
+			 * Create a passportException
+			 * 
+			 * @param err the error message
+			 * @param errorCode the error code
+			 */
+			passportException(std::string err, int errorCode);
 
-			char* createPassportKey(int& status, int& outSize, const char* accountId);
+			/**
+			 * Get the error message.
+			 * Will be in the format {ERR_MSG}#{ERR_CODE}.
+			 * 
+			 * @return the error message
+			 */
+			const char* what() const noexcept override;
 
-			char*
-				passportSign(int& status, int& outSize, const char* accountId, const util::byte* challenge,
-					int challengeSize);
-
-			char* getPublicKey(int& status, int& outSize, const char* accountId);
-
-			char* getPublicKeyHash(int& status, int& outSize, const char* accountId);
-
-			bool
-				verifyChallenge(const util::byte* challenge, int challengeSize, const util::byte* signature,
-					int signatureSize, const util::byte* publicKey, int publicKeySize);
-
-			int deletePassportAccount(const char* accountId);
-		}
+		private:
+			std::string error;
+		};
 
 		/**
 		 * Set where the C# dll is located
@@ -205,36 +203,6 @@ namespace nodeMsPassport {
 		 * @param location the location of the C# dll. Must end with an '/'.
 		 */
 		void setCSharpDllLocation(const std::string& location);
-
-		/**
-		 * A class to get results of any passport operations
-		 */
-		class OperationResult {
-		public:
-			/**
-			 * The OperationResult constructor
-			 */
-			OperationResult(util::secure_byte_vector d, int s) : data(std::move(d)), status(s) {}
-
-			/**
-			 * Check if the status is ok
-			 *
-			 * @return true if the operation was successful
-			 */
-			NODEMSPASSPORT_NODISCARD inline bool ok() const {
-				return status == 0;
-			}
-
-			/**
-			 * The data returned by the operation
-			 */
-			const util::secure_byte_vector data;
-
-			/**
-			 * The status of the operation. If the operation was successful, the status equals to zero
-			 */
-			const int status;
-		};
 
 		/**
 		 * Check if passport is supported
@@ -249,27 +217,14 @@ namespace nodeMsPassport {
 		 * @param accountId the id of the account to check
 		 * @return 0, if the account exists, 1 if the account was found, 2 if an error occurred
 		 */
-		int passportAccountExists(const std::string& accountId);
+		bool passportAccountExists(const std::string& accountId);
 
 		/**
 		 * Get a passport public key
 		 *
 		 * @param accountId the id of the account to add
-		 * @return the result of the operation
 		 */
-		inline OperationResult createPassportKey(const std::string& accountId) {
-			int status, size = 0;
-			char* data = unmanaged::createPassportKey(status, size, accountId.c_str());
-
-			util::secure_byte_vector dt;
-			if (status == 0) {
-				dt.resize(size);
-				memcpy(dt.data(), data, size);
-			}
-
-			unmanaged::freeData(data);
-			return OperationResult(dt, status);
-		}
+		void createPassportKey(const std::string& accountId);
 
 		/**
 		 * Sign a challenge with a users private key
@@ -278,20 +233,7 @@ namespace nodeMsPassport {
 		 * @param challenge the challenge to sign
 		 * @return the result of the operation
 		 */
-		inline OperationResult passportSign(const std::string& accountId, const util::secure_byte_vector& challenge) {
-			int status, size = 0;
-			char* data = unmanaged::passportSign(status, size, accountId.c_str(), challenge.data(),
-				(int)challenge.size());
-
-			util::secure_byte_vector dt;
-			if (status == 0) {
-				dt.resize(size);
-				memcpy(dt.data(), data, size);
-			}
-
-			unmanaged::freeData(data);
-			return OperationResult(dt, status);
-		}
+		secure_vector<byte> passportSign(const std::string& accountId, const secure_vector<byte>& challenge);
 
 		/**
 		 * Get the public key
@@ -299,19 +241,7 @@ namespace nodeMsPassport {
 		 * @param accountId the id of the account
 		 * @return the result of the operation
 		 */
-		inline OperationResult getPublicKey(const std::string& accountId) {
-			int status, size = 0;
-			char* data = unmanaged::getPublicKey(status, size, accountId.c_str());
-
-			util::secure_byte_vector dt;
-			if (status == 0) {
-				dt.resize(size);
-				memcpy(dt.data(), data, size);
-			}
-
-			unmanaged::freeData(data);
-			return OperationResult(dt, status);
-		}
+		secure_vector<byte> getPublicKey(const std::string& accountId);
 
 		/**
 		 * Get a SHA-256 hash of the public key
@@ -319,19 +249,7 @@ namespace nodeMsPassport {
 		 * @param accountId the id of the account
 		 * @return the result of the operation
 		 */
-		inline OperationResult getPublicKeyHash(const std::string& accountId) {
-			int status, size = 0;
-			char* data = unmanaged::getPublicKeyHash(status, size, accountId.c_str());
-
-			util::secure_byte_vector dt;
-			if (status == 0) {
-				dt.resize(size);
-				memcpy(dt.data(), data, size);
-			}
-
-			unmanaged::freeData(data);
-			return OperationResult(dt, status);
-		}
+		secure_vector<byte> getPublicKeyHash(const std::string& accountId);
 
 		/**
 		 * Verify a challenge signed by the passport application
@@ -341,12 +259,8 @@ namespace nodeMsPassport {
 		 * @param the public key of the user
 		 * @return if the signature matched
 		 */
-		inline bool
-			verifySignature(const util::secure_byte_vector& challenge, const util::secure_byte_vector& signature,
-				const util::secure_byte_vector& publicKey) {
-			return unmanaged::verifyChallenge(challenge.data(), (int)challenge.size(), signature.data(),
-				(int)signature.size(), publicKey.data(), (int)publicKey.size());
-		}
+		bool verifySignature(const secure_vector<byte>& challenge, const secure_vector<byte>& signature,
+			const secure_vector<byte>& publicKey);
 
 		/**
 		 * Delete a passport account
@@ -355,24 +269,13 @@ namespace nodeMsPassport {
 		 * @return 0, if the account could be deleted, 1, if a unknown error occurred, 2,
 		 *         if the access was denied and 3, if the key is already deleted
 		 */
-		inline int deletePassportAccount(const std::string& accountId) {
-			return unmanaged::deletePassportAccount(accountId.c_str());
-		}
+		void deletePassportAccount(const std::string& accountId);
 	}
 
 	/**
 	 * Credentials namespace
 	 */
 	namespace credentials {
-		namespace util {
-			void*
-				read(const std::wstring& target, wchar_t*& username, secure_wstring*& password, bool encrypt);
-
-			void freePcred(void* data);
-
-			void deleteWstring(secure_wstring* in);
-		}
-
 		/**
 		 * Write data to the password storage
 		 *
@@ -382,9 +285,8 @@ namespace nodeMsPassport {
 		 * @param encrypt whether to encrypt the password
 		 * @return if the operation was successful
 		 */
-		bool
-			write(const std::wstring& target, const std::wstring& user, const secure_wstring& password,
-				bool encrypt) noexcept;
+		bool write(const std::wstring& target, const std::wstring& user, const secure_wstring& password,
+			bool encrypt);
 
 		/**
 		 * Read data from the password storage
@@ -395,24 +297,7 @@ namespace nodeMsPassport {
 		 * @param whether the password is encrypted
 		 * @return if the operation was successful
 		 */
-		inline bool
-			read(const std::wstring& target, std::wstring& user, secure_wstring& password, bool encrypt) noexcept {
-			wchar_t* username;
-
-			secure_wstring* pass;
-			void* pcred = util::read(target, username, pass, encrypt);
-			if (pcred == nullptr) {
-				return false;
-			} else {
-				password = secure_wstring(pass->begin(), pass->end());
-				util::deleteWstring(pass);
-
-				user = std::wstring(username);
-				util::freePcred(pcred);
-
-				return true;
-			}
-		}
+		bool read(const std::wstring& target, std::wstring& user, secure_wstring& password, bool encrypt);
 
 		/**
 		 * Remove a entry from the credential storage
@@ -420,7 +305,7 @@ namespace nodeMsPassport {
 		 * @param target the account id to remove
 		 * @return if the operation was successful
 		 */
-		bool remove(const std::wstring& target) noexcept;
+		bool remove(const std::wstring& target);
 
 		/**
 		 * Check if a password entry is encrypted
@@ -429,38 +314,20 @@ namespace nodeMsPassport {
 		 * @param ok if the operation was successful
 		 * @return if the password entry is encrypted
 		 */
-		bool isEncrypted(const std::wstring& target) noexcept(false);
+		bool isEncrypted(const std::wstring& target);
 	}
 
 	/**
 	 * Namespace for encrypting passwords
 	 */
 	namespace passwords {
-		namespace util {
-			void deleteWstring(secure_wstring* in);
-
-			bool encrypt(const secure_wstring& data, secure_wstring*& out);
-
-			bool decrypt(const secure_wstring& data, secure_wstring*& out);
-
-			bool isEncrypted(const secure_wstring& data, bool& ok);
-		}
-
 		/**
 		 * Encrypt data using CredProtectW function
 		 *
 		 * @param data the data to encrypt, will remain unchanged if the encryption failed
 		 * @return if the operation was successful
 		 */
-		inline bool encrypt(secure_wstring& data) noexcept {
-			secure_wstring* out = nullptr;
-			bool ok = util::encrypt(data, out);
-			if (!ok) return false;
-
-			data = secure_wstring(out->begin(), out->end());
-			util::deleteWstring(out);
-			return true;
-		}
+		bool encrypt(secure_wstring& data);
 
 		/**
 		 * Decrypt data using CredUnprotectW function
@@ -468,15 +335,7 @@ namespace nodeMsPassport {
 		 * @param data the data to decrypt, will remain unchanged if the decryption failed
 		 * @return if the operation was successful
 		 */
-		inline bool decrypt(secure_wstring& data) noexcept {
-			secure_wstring* out = nullptr;
-			bool ok = util::decrypt(data, out);
-			if (!ok) return false;
-
-			data = secure_wstring(out->begin(), out->end());
-			util::deleteWstring(out);
-			return true;
-		}
+		bool decrypt(secure_wstring& data);
 
 		/**
 		 * Check if data was protected using CredProtectW
@@ -484,14 +343,6 @@ namespace nodeMsPassport {
 		 * @param data the data to check
 		 * @return if the data is encrypted
 		 */
-		inline bool isEncrypted(const secure_wstring& data) noexcept(false) {
-			bool ok;
-			bool res = util::isEncrypted(data, ok);
-
-			if (!ok)
-				throw encryptionException("Could not check if data is encrypted");
-
-			return res;
-		}
+		bool isEncrypted(const secure_wstring& data);
 	}
 }

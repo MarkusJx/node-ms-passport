@@ -70,31 +70,6 @@ if (res !== 0) {
 const accountExists = passport.passportAccountExists("accountId");
 ```
 
-#### Async operations
-Asynchronous operations are supported for use in ui applications to not freeze the app while it waits for
-user input. User input is required on key creation and on signing a challenge.
-
-```js
-// Create key
-pass.createPassportKeyAsync().then(res => {
-    if (res.status !== 0) {
-        console.error("Could not create passport key: " + res.status);
-    }
-});
-
-// Sign data
-pass.passportSignAsync(challenge).then(res => {
-    if (res.status !== 0) {
-        console.error("Could not sign challenge: " + res.status);
-    }
-});
-```
-
-#### Return values
-Many functions return a object containing a status value.
-If the status is zero, everything was ok, 1 if a unknown error occurred, 2 if the user needs to create a pin, 
-3 if the user cancelled the process. ```deletePassportAccount``` just returns a number. It works the same way.
-
 ### Credential vault
 
 It also supports the windows credential vault. Passwords will be encrypted by default.

@@ -50,6 +50,11 @@ if (process.argv.length === 2) {
             fs.copyFileSync(path.join(BUILD_DIR, 'Release', WINDOWS_WINMD), path.join(OUT_DIR, WINDOWS_WINMD));
             fs.copyFileSync(path.join(BUILD_DIR, 'Release', NODEMSPASSPORT_NAME), path.join(LIB_DIR, NODEMSPASSPORT_NAME));
             break;
+        case "--clean":
+            deleteIfExists(OUT_DIR);
+            deleteIfExists(LIB_DIR);
+            deleteIfExists(BUILD_DIR);
+            break;
         default:
             throw new Error(`Unknown argument: ${process.argv[2]}`);
     }
