@@ -34,7 +34,7 @@
     "ia32"
   ],
   "dependencies": {
-    "@markusjx/n-api-tools": "^1.0.2",
+    "@markusjx/n-api-tools": "^1.0.3",
     "cmake-js": "^6.1.0",
     "node-addon-api": "^3.1.0"
   }

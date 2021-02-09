@@ -70,19 +70,21 @@ function rethrowError(e) {
     }
 }
 
+const errorCodes = {
+    ERR_ANY: -1,
+    ERR_UNKNOWN: 1,
+    ERR_MISSING_PIN: 2,
+    ERR_USER_CANCELLED: 3,
+    ERR_USER_PREFERS_PASSWORD: 4,
+    ERR_ACCOUNT_NOT_FOUND: 5,
+    ERR_SIGN_OP_FAILED: 6,
+    ERR_KEY_ALREADY_DELETED: 7,
+    ERR_ACCESS_DENIED: 8
+};
+
 module.exports = {
     PassportError: PassportError,
-    errorCodes: {
-        ERR_ANY: -1,
-        ERR_UNKNOWN: 1,
-        ERR_MISSING_PIN: 2,
-        ERR_USER_CANCELLED: 3,
-        ERR_USER_PREFERS_PASSWORD: 4,
-        ERR_ACCOUNT_NOT_FOUND: 5,
-        ERR_SIGN_OP_FAILED: 6,
-        ERR_KEY_ALREADY_DELETED: 7,
-        ERR_ACCESS_DENIED: 8
-    },
+    errorCodes: errorCodes,
     passport: class {
         constructor(accountId) {
             this.accountExists = this.constructor.passportAccountExists(accountId);
@@ -104,7 +106,8 @@ module.exports = {
         }
 
         async passportSign(challenge) {
-            if (!this.accountExists) throw new Error("The passport account does not exist");
+            if (!this.accountExists)
+                throw new PassportError("The passport account does not exist", errorCodes.ERR_ACCOUNT_NOT_FOUND);
             try {
                 return await passport_native.passportSign(this.accountId, challenge);
             } catch (e) {
@@ -113,7 +116,8 @@ module.exports = {
         }
 
         async deletePassportAccount() {
-            if (!this.accountExists) throw new Error("The passport account does not exist");
+            if (!this.accountExists)
+                throw new PassportError("The passport account does not exist", errorCodes.ERR_ACCOUNT_NOT_FOUND);
             try {
                 await passport_native.deletePassportAccount(this.accountId);
             } catch (e) {
@@ -122,7 +126,8 @@ module.exports = {
         }
 
         async getPublicKey() {
-            if (!this.accountExists) throw new Error("The passport account does not exist");
+            if (!this.accountExists)
+                throw new PassportError("The passport account does not exist", errorCodes.ERR_ACCOUNT_NOT_FOUND);
             try {
                 return await passport_native.getPublicKey(this.accountId);
             } catch (e) {
@@ -131,7 +136,8 @@ module.exports = {
         }
 
         async getPublicKeyHash() {
-            if (!this.accountExists) throw new Error("The passport account does not exist");
+            if (!this.accountExists)
+                throw new PassportError("The passport account does not exist", errorCodes.ERR_ACCOUNT_NOT_FOUND);
             try {
                 return await passport_native.getPublicKeyHash(this.accountId);
             } catch (e) {

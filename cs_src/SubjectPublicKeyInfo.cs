@@ -41,7 +41,6 @@ namespace Passport.Utils {
             const string BCRYPT_PUBLIC_KEY_BLOB = "PUBLICBLOB";
 
             // The incoming raw public key is an ASN.1-encoded subject public key info
-
             SafeLocalAllocHandle publicKeyInfoSafeHandle;
             uint cbPublicKeyInfo; // unused
             bool success = NativeMethods.CryptDecodeObjectEx(

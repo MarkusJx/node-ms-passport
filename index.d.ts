@@ -34,21 +34,50 @@ export type credentialReadResult = {
     password: string;
 };
 
+/**
+ * The error codes that may be stored
+ * by the PassportError class
+ */
 export const errorCodes = {
+    // An exception was thrown by the native
+    // addon of which the error code is unknown
     ERR_ANY: -1,
+    // An unknown error occurred
     ERR_UNKNOWN: 1,
+    // The user needs to create a pin
     ERR_MISSING_PIN: 2,
+    // The user cancelled the operation
     ERR_USER_CANCELLED: 3,
+    // The user prefers a password
     ERR_USER_PREFERS_PASSWORD: 4,
+    // The passport account was not found
     ERR_ACCOUNT_NOT_FOUND: 5,
+    // The sign operation failed
     ERR_SIGN_OP_FAILED: 6,
+    // The key is already deleted
     ERR_KEY_ALREADY_DELETED: 7,
+    // The access was denied
     ERR_ACCESS_DENIED: 8
 }
 
+/**
+ * A passport error
+ */
 export class PassportError extends Error {
+    /**
+     * Create a new PassportError instance
+     * 
+     * @param message the error message
+     * @param code the error code
+     */
     constructor(message: string, code: number);
 
+    /**
+     * Get the error code. Returns one
+     * of errorCodes.
+     * 
+     * @returns the error code
+     */
     getCode(): number;
 }
 
@@ -75,9 +104,6 @@ export class passport {
 
     /**
      * Create a microsoft passport key asynchronously
-     *
-     * @return the status, equals to 0 if everything is ok.
-     *         If so, data will contain the public key as hex string
      */
     async createPassportKey(): Promise<void>;
 
@@ -104,7 +130,7 @@ export class passport {
     /**
      * Get a SHA-256 hash of the public key
      *
-     * @return the hashed public key as a string
+     * @return the hashed public key as a hex string
      */
     async getPublicKeyHash(): Promise<string>;
 
@@ -112,6 +138,7 @@ export class passport {
      * Check if a passport account exists
      * 
      * @param accountId the id of the account to check
+     * @return true, if the account with the given id exists
      */
     static passportAccountExists(accountId: string): boolean;
 
@@ -128,7 +155,7 @@ export class passport {
      * @param challenge the challenge used
      * @param signature the signature returned
      * @param publicKey the public key of the application
-     * @return if the signature matches
+     * @return true, if the signature matches
      */
     static async verifySignature(challenge: string, signature: string, publicKey: string): Promise<boolean>;
 };

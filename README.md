@@ -5,6 +5,22 @@ Uses C# and C++ to store credentials and sign data.
 
 **This addon is only intended to be used with client-only applications, e.g. electron.**
 
+## Installation
+```
+npm install node-ms-passport
+```
+
+## Build requirements
+Visual Studio 2017 or 2019 with installed packages:
+* .NET SDK v4.7.2 or later
+* C++ build tools
+* CMake
+* Windows 10 SDK
+
+or with installed workloads:
+* .NET desktop development
+* Desktop development with C++
+
 ## Usage
 ### Passport
 
@@ -13,61 +29,96 @@ To use it, simply define
 const {passport} = require('node-ms-passport');
 ```
 
-Check if passport is available on this machine
+#### ``static passport.passportAvailable(): boolean``
+Check if Microsoft passport is available on this system:
 ```js
-const {passport} = require('node-ms-passport');
-
-const passportAvailable = passport.passportAvailable();
-if (!passportAvailable) {
-    console.error("Passport is not available");
+if (passport.passportAvailable()) {
+    // MS Passport is available
+} else {
+    // MS Passport is not available
 }
 ```
 
-Create a passport key and sign a challenge with it:
+#### ``static passportAccountExists(accountId: string): boolean``
+Check if a passport account exists:
 ```js
-const {passport, passport_utils} = require('node-ms-passport');
-
-// Create a passport instance
-const pass = new passport("test");
-
-// Returns a status and the public key
-let publicKey = pass.createPassportKey();
-// Check if the status is zero, if not, abort
-if (publicKey.status !== 0) {
-    return;
-}
-
-// Generate a challenge as hex string
-let challenge = passport_utils.generateRandom(25);
-
-// Sign it
-let signature = pass.passportSign(challenge);
-// Check if the status is zero, if not, abort
-if (signature.status !== 0) {
-    return;
-}
-
-// Verify the signature
-let signatureMatches = pass.verifySignature(challenge, 
-                                            signature.data,
-                                            privateKey.data);
-if (signatureMatches) {
-    // Do something with it...
+if (passport.passportAccountExists("SOME_ID")) {
+    // The passport account with the id exists
+} else {
+    // The account does not exist
 }
 ```
 
-Delete the passport key
+#### ``static async verifySignature(challenge: string, signature: string, publicKey: string): Promise<boolean>``
+Verify a signature:
 ```js
-let res = pass.deletePassportAccount();
-// Check if the status is zero, if not, abort
-if (res !== 0) {
-    return;
-}
+const matches = await passport.verifySignature(CHALLENGE, SIGNATURE, PUBLICKEY);
 ```
 
-#### Check if a passport account exists
+#### ``new passport(accountId: string)``
+Create a new instance of the passport class
 ```js
-const accountExists = passport.passportAccountExists("accountId");
+const pass = new passport("SOME_ID");
+```
+If the account already exists, ``passport.accountExists``
+will be set to ``true``.
+
+#### ``async passport.createPassportKey(): Promise<void>``
+Create a passport account and generate a public key:
+```js
+await pass.createPassportKey();
+```
+
+#### ``async passportSign(challenge: string): Promise<string>``
+Sign a challenge with the account's private key.
+Returns the signature as a hex string.
+```js
+const signature = await pass.passportSign("SOME_CHALLENGE");
+```
+
+#### ``async getPublicKey(): Promise<string>``
+Get the account's public key as a hex string:
+```js
+const pubkey = await pass.getPublicKey();
+``` 
+
+#### ``async getPublicKeyHash(): Promise<string>``
+Get the SHA256 Hash of the public key as a hex string:
+```js
+const hash = await pass.getPublicKeyHash();
+```
+
+#### ``async deletePassportAccount(): Promise<void>``
+Delete the passport account:
+```js
+await pass.deletePassportAccount();
+```
+
+#### Exceptions
+Almost every passport operation can throw an instance of ``PassportError``.
+Every instance of ``PassportError`` stores an error code, which is one of ``errorCodes``:
+```js
+{
+    // An exception was thrown by the native
+    // addon of which the error code is unknown
+    ERR_ANY: -1,
+    // An unknown error occurred
+    ERR_UNKNOWN: 1,
+    // The user needs to create a pin
+    ERR_MISSING_PIN: 2,
+    // The user cancelled the operation
+    ERR_USER_CANCELLED: 3,
+    // The user prefers a password
+    ERR_USER_PREFERS_PASSWORD: 4,
+    // The passport account was not found
+    ERR_ACCOUNT_NOT_FOUND: 5,
+    // The sign operation failed
+    ERR_SIGN_OP_FAILED: 6,
+    // The key is already deleted
+    ERR_KEY_ALREADY_DELETED: 7,
+    // The access was denied
+    ERR_ACCESS_DENIED: 8
+}
 ```
 
 ### Credential vault
@@ -78,71 +129,45 @@ To use it, simply define
 const {credentialStore} = require('node-ms-passport');
 ```
 
-Writing and reading credentials to and from the windows credential manager:
+#### ``new credentialStore(accountId: string, encryptPasswords: boolean = true)``
+Create a new ``credentialStore`` instance. Takes an account id and a
+boolean which controls whether to encrypt the stored password.
 ```js
-const {credentialStore} = require('node-ms-passport');
+const store = new credentialStore("some/id", true);
+```
 
-// Create a credentialStore instance.
-// Will encrypt passwords by default.
-const store = new credentialStore("test/test");
+#### ``async write(user: string, password: string): Promise<boolean>``
+Store a username and password. Returns true, if the operation was successful.
+```js
+let ok = await store.write("username", "pa$$word");
+```
 
-// Write credentials
-let successful = store.write("test", "testPassword");
-if (!successful) {
-    // Do something with it...
-}
-
-// Maybe check if the data is encrypted, here the this would return true
-let encrypted;
-try {
-    encrypted = store.isEncrypted();
-} catch (e) { // Should not be called
-    console.error("Data should be encrypted, but it is not");
-    return;
-}
-
-// Read credentials
-let result = store.read();
-// credentials.read() returns null if the operation failed
-if (result == null) {
-    return;
-}
-
-// Get the username and password
-let username = result.username;
-let password = result.password;
-
-// Use it
-console.log("Read username:", username, "and password:", password);
-
-// Delete this credential
-successful = store.remove();
-if (!successful) {
-    // Do something with it, throw an error, 
-    // get some ice cream to eat under the shower...
+#### ``async read(): Promise<credentialReadResult | null>``
+Read a username and password from the credential vault.
+Returns a ``credentialReadResult`` on success storing the username
+and password or ``null`` if the operation failed.
+```js
+let res = await store.read();
+if (res === null) {
+    // The operation failed
+} else {
+    // The operation was successful
+    let user = res.username;
+    let pass = res.password;
 }
 ```
 
-Encryption can be turned off by passing ``false`` to the read and write methods:
-
+#### ``async remove(): Promise<boolean>`` 
+Remove a username and password from the credential vault.
+Returns ``true`` if the operation failed.
 ```js
-// Create a credentialStore, which does not encrypt passwords
-const store = new creadentialStore("test/test", false);
+let ok = await store.remove();
+```
 
-// Write credentials
-let successful = store.write("test", "testPassword");
-if (!successful) {
-    // Do something with it...
-}
-
-// isEncrypted() check will return false
-
-// Read credentials
-let result = store.read();
-// credentials.read() returns null if the operation failed
-if (result == null) {
-    return;
-}
+#### ``async isEncrypted(): Promise<boolean>``
+Check if the password in the credential vault is encrypted:
+```js
+let encrypted = store.isEncrypted();
 ```
 
 ### Encrypt data
@@ -155,6 +180,123 @@ To use it, simply define
 const {passwords} = require('node-ms-passport');
 ```
 
+#### ``async passwords.encrypt(data: string): Promise<string>``
+Encrypt a password. Returns the encrypted password as a hex string.
+```js
+const encrypted = await passwords.encrypt("pa$$word");
+```
+
+#### ``async passwords.decrypt(data: string): Promise<string>``
+Decrypt a hex-encoded password. Returns the decrypted password string.
+```js
+const password = await passwords.decrypt(encrypted);
+```
+
+#### ``async passwords.isEncrypted(data: string): Promise<boolean>``
+Check if a hex-encoded password is encrypted:
+```js
+const is_encrypted = await passwords.isEncrypted(encrypted);
+```
+
+### Passport utils
+#### ``passport_utils.generateRandom(length: number): string``
+Generate random bytes and get them as a hex-encoded string:
+```js
+const {passport_utils} = require('node-ms-passport');
+
+const rnd = passport_utils.generateRandom(25);
+```
+
+### Examples
+#### Passport
+```js
+const {passport, passport_utils} = require('node-ms-passport');
+
+// Check if this system supports ms passport
+if (!passport.passportAvailable()) {
+    // MS Passport is not available
+    return;
+}
+
+// Create a new passport instance
+const pass = new passport("SOME_ID");
+
+// If the account does not exist,
+// create it
+if (!pass.accountExists) {
+    await pass.createPassportKey();
+}
+
+// Get the public key
+let pubkey = await pass.getPublicKey();
+
+// Generate a challenge
+let challenge = passport_utils.generateRandom(25);
+
+// Sign the challenge
+let signature = await pass.passportSign(challenge);
+
+// Check if the signature matches
+let signature_matches = await passport.verifySignature(
+                                                challenge,
+                                                signed,
+                                                pubkey);
+
+if (!signature_matches) {
+    // The signature does not match
+    return;
+}
+
+// Delete the passport key
+await pass.deletePassportAccount();
+```
+
+#### Credential vault
+```js
+const {credentialStore} = require('node-ms-passport');
+
+// Create a new credentialStore instance
+// with encrypting password
+const store = new credentialStore("test/test", true);
+
+// Create a new credentialStore instance
+// without encryping passwords
+const plain_store = new credentialStore("test/plain", false);
+
+// Write the password
+let ok = await store.write("test", "pa$$word");
+of (!ok) {
+    // Could not store the password
+    return;
+}
+
+// Check if the stored password is encrypted
+let encrypted = await store.isEncrypted();
+if (!encrypted) {
+    // It should be encrypted...
+    return;
+}
+
+// Read the password
+let res = await store.read();
+if (res === null) {
+    // The read operation failed
+    return;
+}
+
+// Get the username and password
+let user = res.username;
+let pass = res.password;
+
+// Delete the credential
+ok = await store.remove();
+if (!ok) {
+    // Could not delete the credential
+    return;
+}
+```
+
+#### Password encryption
 Encrypting and decrypting a password:
 ```js
 const {passwords} = require('node-ms-passport');
@@ -162,7 +304,7 @@ const {passwords} = require('node-ms-passport');
 // Encrypt a password
 let data;
 try {
-    data = passwords.encrypt("TestPassword");
+    data = await passwords.encrypt("TestPassword");
 } catch (e) {
     return; // Throws on failure
 }
@@ -170,7 +312,7 @@ try {
 // Check if the data is encrypted
 let encrypted;
 try {
-    encrypted = passwords.isEncrypted(data);
+    encrypted = await passwords.isEncrypted(data);
 } catch (e) {
     return; // Throws error on failure
 }
@@ -183,7 +325,7 @@ if (!encrypted) { // Should not be called
 // Trying to call any function which requires a hex string with
 // invalid data will throw an error
 try {
-    passwords.isEncrypted("data"); // 't' is no valid hex character
+    await passwords.isEncrypted("data"); // 't' is no valid hex character
 } catch (e) {
     console.error(e);
     return;
