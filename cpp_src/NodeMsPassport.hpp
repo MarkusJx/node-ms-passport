@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PASSPORT_NODEMSPASSPORT_HPP
+#define PASSPORT_NODEMSPASSPORT_HPP
 
 #include <vector>
 #include <string>
@@ -160,11 +161,6 @@ namespace nodeMsPassport {
 		}
 	};
 
-	class encryptionException : public std::exception {
-	public:
-		using std::exception::exception;
-	};
-
 	/**
 	 * A namespace for MS passport operations
 	 */
@@ -215,7 +211,7 @@ namespace nodeMsPassport {
 		 * Check if a ms passport account exists
 		 *
 		 * @param accountId the id of the account to check
-		 * @return 0, if the account exists, 1 if the account was found, 2 if an error occurred
+		 * @return true if the account exists
 		 */
 		bool passportAccountExists(const std::string& accountId);
 
@@ -257,7 +253,7 @@ namespace nodeMsPassport {
 		 * @param challenge the challenge used
 		 * @param the signature returned by passport
 		 * @param the public key of the user
-		 * @return if the signature matched
+		 * @return true if the signature matched
 		 */
 		bool verifySignature(const secure_vector<byte>& challenge, const secure_vector<byte>& signature,
 			const secure_vector<byte>& publicKey);
@@ -266,8 +262,6 @@ namespace nodeMsPassport {
 		 * Delete a passport account
 		 *
 		 * @param accountId the id of the account to delete
-		 * @return 0, if the account could be deleted, 1, if a unknown error occurred, 2,
-		 *         if the access was denied and 3, if the key is already deleted
 		 */
 		void deletePassportAccount(const std::string& accountId);
 	}
@@ -346,3 +340,5 @@ namespace nodeMsPassport {
 		bool isEncrypted(const secure_wstring& data);
 	}
 }
+
+#endif //PASSPORT_NODEMSPASSPORT_HPP

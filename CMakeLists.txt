@@ -39,7 +39,8 @@ set_target_properties(CSNodeMsPassport PROPERTIES
 # C++ part
 set(CMAKE_CXX_STANDARD 17)
 set(CPP_SRC "${CMAKE_SOURCE_DIR}/cpp_src")
-set(CS_WRAPPER_SRC ${CPP_SRC}/NodeMsPassport.cpp ${CPP_SRC}/NodeMsPassport.hpp)
+set(CS_WRAPPER_SRC ${CPP_SRC}/NodeMsPassport.cpp ${CPP_SRC}/NodeMsPassport.hpp
+		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp)
 
 add_library(NodeMsPassport STATIC ${CS_WRAPPER_SRC})
 
