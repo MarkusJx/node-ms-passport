@@ -10,6 +10,18 @@ Uses C# and C++ to store credentials and sign data.
 npm install node-ms-passport
 ```
 
+The native library is built using cmake-js, so you should set the runtime to electron
+in your ``package.json`` if you are planning on using this addon with electron:
+```json
+{
+  "cmake-js": {
+    "runtime": "electron",
+    "runtimeVersion": "electron-runtime-version-here",
+    "arch": "whatever-setting-is-appropriate-for-your-application's-windows-build"
+  }
+}
+```
+
 ## Build requirements
 Visual Studio 2017 or 2019 with installed packages:
 * .NET SDK v4.7.2 or later
@@ -467,7 +479,7 @@ int main() {
     bool encrypted;
     try {
         encrypted = isEncrypted(password);
-    } catch (NodeMsPassport::encryptionException &e) {
+    } catch (const std::exception &e) {
         return 1; // Throws exception if not ok
     }
 
