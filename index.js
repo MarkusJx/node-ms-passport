@@ -48,6 +48,12 @@ class PassportError extends Error {
         super(message);
         this.name = "PassportError";
         this.#code = code;
+
+        if (typeof code !== 'number') {
+            throw new Error("Parameter 'code' must be typeof 'number'");
+        } else if (typeof message !== 'string') {
+            throw new Error("Parameter 'message' must be typeof 'string'");
+        }
     }
 
     getCode() {
@@ -87,6 +93,12 @@ module.exports = {
     errorCodes: errorCodes,
     passport: class {
         constructor(accountId) {
+            if (typeof accountId !== 'string') {
+                throw new Error("Parameter 'accountId' must be typeof 'string'");
+            } else if (accountId.length === 0) {
+                throw new Error("Parameter 'accountId' must not be empty");
+            }
+
             this.accountExists = this.constructor.passportAccountExists(accountId);
             Object.defineProperty(this, 'accountId', {
                 value: accountId,
@@ -171,6 +183,14 @@ module.exports = {
     },
     credentialStore: class {
         constructor(accountId, encryptPasswords = true) {
+            if (typeof accountId !== 'string') {
+                throw new Error("Parameter 'accountId' must be typeof 'string'");
+            } else if (accountId.length === 0) {
+                throw new Error("Parameter 'accountId' must not be empty");
+            } else if (typeof encryptPasswords !== 'boolean') {
+                throw new Error("Parameter 'encryptPasswords' must be typeof'boolean'");
+            }
+
             Object.defineProperty(this, 'accountId', {
                 value: accountId,
                 enumerable: true,
