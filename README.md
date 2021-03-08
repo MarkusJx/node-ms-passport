@@ -251,7 +251,7 @@ let signature = await pass.passportSign(challenge);
 // Check if the signature matches
 let signature_matches = await passport.verifySignature(
                                                 challenge,
-                                                signed,
+                                                signature,
                                                 pubkey);
 
 if (!signature_matches) {
