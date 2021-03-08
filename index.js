@@ -28,8 +28,8 @@
 if (process.platform !== 'win32') {
     throw new Error("OS is not supported. Only windows 10 is supported");
 } else {
-    let version = require('child_process').execSync('ver').toString().trim();
-    version = version.split("[")[1].replace("Version ", "").split(".")[0];
+    const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
+                    .split('[')[1].split(' ')[1].split('.')[0];
     if (Number(version) !== 10) {
         throw new Error("Windows version is not supported. Only windows 10 is supported");
     }
