@@ -3,7 +3,7 @@
  *
  * MIT License
  *
- * Copyright (c) 2020 MarkusJx
+ * Copyright (c) 2020 - 2021 MarkusJx
  *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
@@ -70,7 +70,7 @@ export class PassportError extends Error {
      * @param message the error message
      * @param code the error code
      */
-    constructor(message: string, code: number);
+    public constructor(message: string, code: number);
 
     /**
      * Get the error code. Returns one
@@ -78,7 +78,7 @@ export class PassportError extends Error {
      * 
      * @returns the error code
      */
-    getCode(): number;
+    public getCode(): number;
 }
 
 /**
