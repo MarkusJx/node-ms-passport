@@ -109,27 +109,27 @@ await pass.deletePassportAccount();
 #### Exceptions
 Almost every passport operation can throw an instance of ``PassportError``.
 Every instance of ``PassportError`` stores an error code, which is one of ``errorCodes``:
-```js
-{
+```ts
+enum errorCodes {
     // An exception was thrown by the native
     // addon of which the error code is unknown
-    ERR_ANY: -1,
+    ERR_ANY = -1,
     // An unknown error occurred
-    ERR_UNKNOWN: 1,
+    ERR_UNKNOWN = 1,
     // The user needs to create a pin
-    ERR_MISSING_PIN: 2,
+    ERR_MISSING_PIN = 2,
     // The user cancelled the operation
-    ERR_USER_CANCELLED: 3,
+    ERR_USER_CANCELLED = 3,
     // The user prefers a password
-    ERR_USER_PREFERS_PASSWORD: 4,
+    ERR_USER_PREFERS_PASSWORD = 4,
     // The passport account was not found
-    ERR_ACCOUNT_NOT_FOUND: 5,
+    ERR_ACCOUNT_NOT_FOUND = 5,
     // The sign operation failed
-    ERR_SIGN_OP_FAILED: 6,
+    ERR_SIGN_OP_FAILED = 6,
     // The key is already deleted
-    ERR_KEY_ALREADY_DELETED: 7,
+    ERR_KEY_ALREADY_DELETED = 7,
     // The access was denied
-    ERR_ACCESS_DENIED: 8
+    ERR_ACCESS_DENIED = 8
 }
 ```
 
