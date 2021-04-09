@@ -12,3 +12,4 @@ out/
 .vs/
 .vscode/
 lib/
+cmake-build*

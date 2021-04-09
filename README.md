@@ -1,7 +1,7 @@
 # node-ms-passport
 
 Microsoft Passport and Credential storage for Node.js. Only works on Windows. Obviously.
-Uses C# and C++ to store credentials and sign data.
+Uses C# and C++ to store credentials and sign data. Typescript definitions are available.
 
 **This addon is only intended to be used with client-only applications, e.g. electron.**
 
@@ -61,7 +61,13 @@ if (passport.passportAccountExists("SOME_ID")) {
 }
 ```
 
-#### ``static async verifySignature(challenge: string, signature: string, publicKey: string): Promise<boolean>``
+#### ``static verifySignatureHex(challenge: string, signature: string, publicKey: string): Promise<boolean>``
+Verify a signature (all arguments as hex-encoded strings):
+```js
+const matches = await passport.verifySignatureHex(CHALLENGE, SIGNATURE, PUBLICKEY);
+```
+
+#### ``static verifySignature(challenge: Buffer, signature: Buffer, publicKey: Buffer): Promise<boolean>``
 Verify a signature:
 ```js
 const matches = await passport.verifySignature(CHALLENGE, SIGNATURE, PUBLICKEY);
@@ -75,32 +81,51 @@ const pass = new passport("SOME_ID");
 If the account already exists, ``passport.accountExists``
 will be set to ``true``.
 
-#### ``async passport.createPassportKey(): Promise<void>``
+#### ``passport.createPassportKey(): Promise<void>``
 Create a passport account and generate a public key:
 ```js
 await pass.createPassportKey();
 ```
 
-#### ``async passportSign(challenge: string): Promise<string>``
+#### ``passportSignHex(challenge: string): Promise<string>``
 Sign a challenge with the account's private key.
 Returns the signature as a hex string.
 ```js
-const signature = await pass.passportSign("SOME_CHALLENGE");
+const signature = await pass.passportSignHex("SOME_CHALLENGE");
 ```
 
-#### ``async getPublicKey(): Promise<string>``
+#### ``passportSign(challenge: Buffer): Promise<Buffer>``
+Sign a challenge with the account's private key.
+Returns the signature bytes in a ``Buffer``.
+```js
+const signature = await pass.passportSign(Buffer.from("SOME_CHALLENGE"));
+```
+
+#### ``getPublicKeyHex(): Promise<string>``
 Get the account's public key as a hex string:
 ```js
-const pubkey = await pass.getPublicKey();
-``` 
+const pubkey = await pass.getPublicKeyHex();
+```
 
-#### ``async getPublicKeyHash(): Promise<string>``
+#### ``getPublicKey(): Promise<Buffer>``
+Get the account's public key bytes in a ``Buffer``:
+```js
+const pubkey = await pass.getPublicKey();
+```
+
+#### ``getPublicKeyHashHex(): Promise<string>``
 Get the SHA256 Hash of the public key as a hex string:
+```js
+const hash = await pass.getPublicKeyHashHex();
+```
+
+#### ``getPublicKeyHash(): Promise<string>``
+Get the SHA256 Hash bytes of the public key in a ``Buffer``:
 ```js
 const hash = await pass.getPublicKeyHash();
 ```
 
-#### ``async deletePassportAccount(): Promise<void>``
+#### ``deletePassportAccount(): Promise<void>``
 Delete the passport account:
 ```js
 await pass.deletePassportAccount();
@@ -148,13 +173,13 @@ boolean which controls whether to encrypt the stored password.
 const store = new credentialStore("some/id", true);
 ```
 
-#### ``async write(user: string, password: string): Promise<boolean>``
+#### ``write(user: string, password: string): Promise<boolean>``
 Store a username and password. Returns true, if the operation was successful.
 ```js
 let ok = await store.write("username", "pa$$word");
 ```
 
-#### ``async read(): Promise<credentialReadResult | null>``
+#### ``read(): Promise<credentialReadResult | null>``
 Read a username and password from the credential vault.
 Returns a ``credentialReadResult`` on success storing the username
 and password or ``null`` if the operation failed.
@@ -169,14 +194,14 @@ if (res === null) {
 }
 ```
 
-#### ``async remove(): Promise<boolean>`` 
+#### ``remove(): Promise<boolean>`` 
 Remove a username and password from the credential vault.
 Returns ``true`` if the operation failed.
 ```js
 let ok = await store.remove();
 ```
 
-#### ``async isEncrypted(): Promise<boolean>``
+#### ``isEncrypted(): Promise<boolean>``
 Check if the password in the credential vault is encrypted:
 ```js
 let encrypted = store.isEncrypted();
@@ -192,27 +217,53 @@ To use it, simply define
 const {passwords} = require('node-ms-passport');
 ```
 
-#### ``async passwords.encrypt(data: string): Promise<string>``
+#### ``passwords.encryptHex(data: string): Promise<string>``
 Encrypt a password. Returns the encrypted password as a hex string.
+```js
+const encrypted = await passwords.encryptHex("pa$$word");
+```
+
+#### ``passwords.encrypt(data: string): Promise<Buffer>``
+Encrypt a password. Returns the encrypted password bytes in a ``Buffer``.
 ```js
 const encrypted = await passwords.encrypt("pa$$word");
 ```
 
-#### ``async passwords.decrypt(data: string): Promise<string>``
+#### ``passwords.decryptHex(data: string): Promise<string>``
 Decrypt a hex-encoded password. Returns the decrypted password string.
+```js
+const password = await passwords.decryptHex(encrypted);
+```
+
+#### ``passwords.decrypt(data: Buffer): Promise<string>``
+Decrypt password bytes in a ``Buffer``. Returns the decrypted password string.
 ```js
 const password = await passwords.decrypt(encrypted);
 ```
 
-#### ``async passwords.isEncrypted(data: string): Promise<boolean>``
+#### ``passwords.isEncryptedHex(data: string): Promise<boolean>``
 Check if a hex-encoded password is encrypted:
+```js
+const is_encrypted = await passwords.isEncryptedHex(encrypted);
+```
+
+#### ``passwords.isEncrypted(data: Buffer): Promise<boolean>``
+Check if password bytes in a ``Buffer`` are encrypted:
 ```js
 const is_encrypted = await passwords.isEncrypted(encrypted);
 ```
 
 ### Passport utils
-#### ``passport_utils.generateRandom(length: number): string``
+#### ``passport_utils.generateRandomHex(length: number): string``
 Generate random bytes and get them as a hex-encoded string:
+```js
+const {passport_utils} = require('node-ms-passport');
+
+const rnd = passport_utils.generateRandomHex(25);
+```
+
+#### ``passport_utils.generateRandom(length: number): Buffer``
+Generate random bytes and get them in a ``Buffer``:
 ```js
 const {passport_utils} = require('node-ms-passport');
 

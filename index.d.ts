@@ -83,11 +83,6 @@ export class PassportError extends Error {
 
 /**
  * Microsoft passport for node js
- *
- * If the status is zero, everything was ok,
- * 1 if an unknown error occurred,
- * 2 if the user needs to create a pin,
- * 3 if the user cancelled the process
  */
 export class passport {
     // The id of the passport account
@@ -113,7 +108,15 @@ export class passport {
      * @param challenge the challenge to sign
      * @return the signature as a hex string
      */
-    public passportSign(challenge: string): Promise<string>;
+    public passportSignHex(challenge: string): Promise<string>;
+
+    /**
+     * Sign a challenge
+     *
+     * @param challenge the challenge to sign
+     * @return the signature in a buffer
+     */
+    public passportSign(challenge: Buffer): Promise<Buffer>;
 
     /**
      * Delete a passport account
@@ -125,14 +128,28 @@ export class passport {
      *
      * @return the public key as a hex string
      */
-    public getPublicKey(): Promise<string>;
+    public getPublicKeyHex(): Promise<string>;
+
+    /**
+     * Get the public key
+     *
+     * @return the public key in a buffer
+     */
+    public getPublicKey(): Promise<Buffer>;
 
     /**
      * Get a SHA-256 hash of the public key
      *
      * @return the hashed public key as a hex string
      */
-    public getPublicKeyHash(): Promise<string>;
+    public getPublicKeyHashHex(): Promise<string>;
+
+    /**
+     * Get a SHA-256 hash of the public key
+     *
+     * @return the hashed public key in a buffer
+     */
+    public getPublicKeyHash(): Promise<Buffer>;
 
     /**
      * Check if a passport account exists
@@ -157,7 +174,17 @@ export class passport {
      * @param publicKey the public key of the application
      * @return true, if the signature matches
      */
-    public static verifySignature(challenge: string, signature: string, publicKey: string): Promise<boolean>;
+    public static verifySignatureHex(challenge: string, signature: string, publicKey: string): Promise<boolean>;
+
+    /**
+     * Verify a challenge signed by passport
+     *
+     * @param challenge the challenge used
+     * @param signature the signature returned
+     * @param publicKey the public key of the application
+     * @return true, if the signature matches
+     */
+    public static verifySignature(challenge: Buffer, signature: Buffer, publicKey: Buffer): Promise<boolean>;
 }
 
 /**
@@ -218,7 +245,15 @@ export namespace passwords {
      * @param data the data to encrypt
      * @returns the result as hex string or null if unsuccessful
      */
-    function encrypt(data: string): Promise<string>;
+    function encryptHex(data: string): Promise<string>;
+
+    /**
+     * Encrypt a password using CredProtect. Throws on error
+     *
+     * @param data the data to encrypt
+     * @returns the result in a buffer or null if unsuccessful
+     */
+    function encrypt(data: string): Promise<Buffer>;
 
     /**
      * Decrypt a password using CredUnprotect. Throws on error
@@ -226,7 +261,15 @@ export namespace passwords {
      * @param data the data to decrypt as hex string
      * @returns the result as string or null if unsuccessful
      */
-    function decrypt(data: string): Promise<string>;
+    function decryptHex(data: string): Promise<string>;
+
+    /**
+     * Decrypt a password using CredUnprotect. Throws on error
+     *
+     * @param data the data to decrypt in a buffer
+     * @returns the result as string or null if unsuccessful
+     */
+    function decrypt(data: Buffer): Promise<string>;
 
     /**
      * Check if data was encrypted using CredProtect. Throws an error on error
@@ -234,7 +277,15 @@ export namespace passwords {
      * @param data the data as hex string
      * @returns if the password is encrypted
      */
-    function isEncrypted(data: string): Promise<boolean>;
+    function isEncryptedHex(data: string): Promise<boolean>;
+
+    /**
+     * Check if data was encrypted using CredProtect. Throws an error on error
+     *
+     * @param data the data in a buffer
+     * @returns if the password is encrypted
+     */
+    function isEncrypted(data: Buffer): Promise<boolean>;
 }
 
 /**
@@ -247,7 +298,15 @@ export namespace passport_utils {
      * @param length the length of the challenge in bytes
      * @return the random bytes as hex string
      */
-    function generateRandom(length: number): string;
+    function generateRandomHex(length: number): string;
+
+    /**
+     * Generate random bytes
+     *
+     * @param length the length of the challenge in bytes
+     * @return the random bytes in a buffer
+     */
+    function generateRandom(length: number): Buffer;
 }
 
 /**

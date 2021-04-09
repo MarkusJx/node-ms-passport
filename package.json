@@ -1,6 +1,6 @@
 {
   "name": "node-ms-passport",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "Microsoft passport with windows hello and credential manager for node js",
   "repository": "https://github.com/MarkusJx/node-ms-passport",
   "scripts": {
@@ -34,7 +34,7 @@
     "ia32"
   ],
   "dependencies": {
-    "@markusjx/n-api-tools": "^1.0.3",
+    "@markusjx/n-api-tools": "^1.0.4",
     "cmake-js": "^6.1.0",
     "node-addon-api": "^3.1.0"
   }

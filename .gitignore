@@ -355,3 +355,4 @@ build/
 .vscode
 lib/
 .idea
+cmake-build*
