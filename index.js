@@ -42,12 +42,12 @@ const passport_native = require(path.join(__dirname, 'bin', 'passport.node'));
 passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
 
 class PassportError extends Error {
-    #code = -1;
+    code = -1;
 
     constructor(message, code) {
         super(message);
         this.name = "PassportError";
-        this.#code = code;
+        this.code = code;
 
         if (typeof code !== 'number') {
             throw new Error("Parameter 'code' must be typeof 'number'");
@@ -57,7 +57,7 @@ class PassportError extends Error {
     }
 
     getCode() {
-        return this.#code;
+        return this.code;
     }
 }
 
