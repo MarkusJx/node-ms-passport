@@ -41,9 +41,16 @@ const passport_native = require(path.join(__dirname, 'bin', 'passport.node'));
 // Set the location for the C# dll
 passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
 
+/**
+ * A passport error
+ */
 class PassportError extends Error {
-    code = -1;
-
+    /**
+     * Create a passport error
+     * 
+     * @param {string} message the error message
+     * @param {number} code the error code
+     */
     constructor(message, code) {
         super(message);
         this.name = "PassportError";
@@ -56,6 +63,11 @@ class PassportError extends Error {
         }
     }
 
+    /**
+     * Get the error code
+     * 
+     * @returns {number} the error code
+     */
     getCode() {
         return this.code;
     }
