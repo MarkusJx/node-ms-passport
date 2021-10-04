@@ -365,6 +365,128 @@ Napi::Boolean passwordEncrypted(const Napi::CallbackInfo& info) {
 	CATCH_EXCEPTIONS
 }
 
+Napi::Boolean passwordVaultAccountExists(const Napi::CallbackInfo& info) {
+    CHECK_ARGS(napi_tools::string, napi_tools::string);
+
+	TRY
+        std::u16string resource = info[0].ToString().Utf16Value();
+		std::u16string username = info[1].ToString().Utf16Value();
+		bool res = password_vault::accountExists(
+			std::wstring(resource.begin(), resource.end()),
+			std::wstring(username.begin(), username.end())
+		);
+
+		return Napi::Boolean::New(info.Env(), res);
+	CATCH_EXCEPTIONS
+}
+
+void passwordVaultStore(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(napi_tools::string, napi_tools::string, napi_tools::string);
+
+	TRY
+		std::u16string resource = info[0].ToString().Utf16Value();
+		std::u16string username = info[1].ToString().Utf16Value();
+		std::u16string password = info[2].ToString().Utf16Value();
+
+		password_vault::login_data login(
+			std::wstring(username.begin(), username.end()),
+			secure_wstring(password.begin(), password.end())
+		);
+
+		password_vault::store(std::wstring(resource.begin(), resource.end()), login);
+	CATCH_EXCEPTIONS
+}
+
+Napi::Object loginToNapiObject(const Napi::Env& env, const password_vault::login_data& login) {
+    Napi::Object res = Napi::Object::New(env);
+    res.Set("username", Napi::String::New(env, (char16_t *) login.username.c_str()));
+    res.Set("password", Napi::String::New(env, (char16_t *) login.password.c_str()));
+
+    return res;
+}
+
+Napi::Object passwordVaultRetrieve(const Napi::CallbackInfo& info) {
+    CHECK_ARGS(napi_tools::string, napi_tools::string);
+
+	TRY
+		std::u16string resource = info[0].ToString().Utf16Value();
+		std::u16string username = info[1].ToString().Utf16Value();
+
+		password_vault::login_data login = password_vault::retrieve(
+			std::wstring(resource.begin(), resource.end()),
+			std::wstring(username.begin(), username.end())
+		);
+
+        return loginToNapiObject(info.Env(), login);
+	CATCH_EXCEPTIONS
+}
+
+void passwordVaultRemove(const Napi::CallbackInfo& info) {
+    CHECK_ARGS(napi_tools::string, napi_tools::string);
+
+	TRY
+		std::u16string resource = info[0].ToString().Utf16Value();
+		std::u16string username = info[1].ToString().Utf16Value();
+
+		password_vault::remove(
+			std::wstring(resource.begin(), resource.end()),
+			std::wstring(username.begin(), username.end())
+		);
+	CATCH_EXCEPTIONS
+}
+
+Napi::Array passwordVaultRetrieveByResource(const Napi::CallbackInfo& info) {
+    CHECK_ARGS(napi_tools::string);
+
+	TRY
+        std::u16string resource = info[0].ToString().Utf16Value();
+
+		std::vector<password_vault::login_data> res =
+			password_vault::retrieveByResource(std::wstring(resource.begin(), resource.end()));
+
+		Napi::Env env = info.Env();
+        Napi::Array arr = Napi::Array::New(env, res.size());
+		for (size_t i = 0; i < res.size(); ++i) {
+            arr.Set(static_cast<uint32_t>(i), loginToNapiObject(env, res.at(i)));
+		}
+
+		return arr;
+	CATCH_EXCEPTIONS
+}
+
+Napi::Array passwordVaultRetrieveByUsername(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(napi_tools::string);
+
+    TRY
+		std::u16string username = info[0].ToString().Utf16Value();
+
+		std::vector<password_vault::login_data> res =
+            password_vault::retrieveByUsername(std::wstring(username.begin(), username.end()));
+
+		Napi::Env env = info.Env();
+		Napi::Array arr = Napi::Array::New(env, res.size());
+		for (size_t i = 0; i < res.size(); ++i) {
+			arr.Set(static_cast<uint32_t>(i), loginToNapiObject(env, res.at(i)));
+		}
+
+		return arr;
+    CATCH_EXCEPTIONS
+}
+
+Napi::Array passwordVaultRetrieveAll(const Napi::CallbackInfo &info) {
+    TRY
+		std::vector<password_vault::login_data> res = password_vault::retrieveAll();
+
+		Napi::Env env = info.Env();
+		Napi::Array arr = Napi::Array::New(env, res.size());
+		for (size_t i = 0; i < res.size(); ++i) {
+			arr.Set(static_cast<uint32_t>(i), loginToNapiObject(env, res.at(i)));
+		}
+
+		return arr;
+    CATCH_EXCEPTIONS
+}
+
 Napi::String generateRandom(const Napi::CallbackInfo& info) {
 	CHECK_ARGS(napi_tools::number);
 
@@ -416,6 +538,14 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
 	EXPORT_FUNCTION(exports, env, decryptPassword);
 	EXPORT_FUNCTION(exports, env, passwordEncryptedHex);
 	EXPORT_FUNCTION(exports, env, passwordEncrypted);
+
+	EXPORT_FUNCTION(exports, env, passwordVaultAccountExists);
+    EXPORT_FUNCTION(exports, env, passwordVaultStore);
+    EXPORT_FUNCTION(exports, env, passwordVaultRetrieve);
+    EXPORT_FUNCTION(exports, env, passwordVaultRemove);
+    EXPORT_FUNCTION(exports, env, passwordVaultRetrieveByResource);
+    EXPORT_FUNCTION(exports, env, passwordVaultRetrieveByUsername);
+    EXPORT_FUNCTION(exports, env, passwordVaultRetrieveAll);
 
 	EXPORT_FUNCTION(exports, env, generateRandom);
 	EXPORT_FUNCTION(exports, env, setCSharpDllLocation);

@@ -50,13 +50,28 @@ passport::passportException convertException(Exception^ e) {
 	return passport::passportException(CLITools::string_to_std_string(e->Message), code);
 }
 
+std::runtime_error getRuntimeError(Exception^ e) {
+    // If the exception is typeof TargetInvocationException,
+    // the actual exception is the inner exception of e
+    if (e->GetType() == TargetInvocationException::typeid) {
+        e = e->InnerException;
+    }
+
+	return std::runtime_error(CLITools::string_to_std_string(e->Message));
+}
+
+template<class T, class... Args>
+T callPassportFunc(String^ s, Args... args) {
+    return CLITools::callFunc<T>("CSNodeMsPassport.Passport", s, std::forward<Args>(args)...);
+}
+
 void passport::setCSharpDllLocation(const std::string& location) {
 	CLITools::setDllLocation(location);
 }
 
 bool passport::passportAvailable() {
 	try {
-		return CLITools::callFunc<bool>("PassportAvailable");
+        return callPassportFunc<bool>("PassportAvailable");
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -64,7 +79,7 @@ bool passport::passportAvailable() {
 
 bool passport::passportAccountExists(const std::string& accountId) {
 	try {
-		return CLITools::callFunc<bool>("PassportAccountExists", accountId);
+        return callPassportFunc<bool>("PassportAccountExists", accountId);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -72,7 +87,7 @@ bool passport::passportAccountExists(const std::string& accountId) {
 
 void passport::createPassportKey(const std::string& accountId) {
 	try {
-		CLITools::callFunc<void>("CreatePassportKey", accountId);
+        callPassportFunc<void>("CreatePassportKey", accountId);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -80,7 +95,7 @@ void passport::createPassportKey(const std::string& accountId) {
 
 secure_vector<byte> passport::passportSign(const std::string& accountId, const secure_vector<byte>& challenge) {
 	try {
-		return CLITools::callFunc<secure_vector<byte>>("PassportSign", accountId, challenge);
+        return callPassportFunc<secure_vector<byte>>("PassportSign", accountId, challenge);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -88,7 +103,7 @@ secure_vector<byte> passport::passportSign(const std::string& accountId, const s
 
 secure_vector<byte> passport::getPublicKey(const std::string& accountId) {
 	try {
-		return CLITools::callFunc<secure_vector<byte>>("GetPublicKey", accountId);
+        return callPassportFunc<secure_vector<byte>>("GetPublicKey", accountId);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -96,7 +111,7 @@ secure_vector<byte> passport::getPublicKey(const std::string& accountId) {
 
 secure_vector<byte> passport::getPublicKeyHash(const std::string& accountId) {
 	try {
-		return CLITools::callFunc<secure_vector<byte>>("GetPublicKeyHash", accountId);
+        return callPassportFunc<secure_vector<byte>>("GetPublicKeyHash", accountId);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -105,7 +120,7 @@ secure_vector<byte> passport::getPublicKeyHash(const std::string& accountId) {
 bool passport::verifySignature(const secure_vector<byte>& challenge, const secure_vector<byte>& signature,
 	const secure_vector<byte>& publicKey) {
 	try {
-		return CLITools::callFunc<bool>("VerifyChallenge", challenge, signature, publicKey);
+        return callPassportFunc<bool>("VerifyChallenge", challenge, signature, publicKey);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -113,7 +128,7 @@ bool passport::verifySignature(const secure_vector<byte>& challenge, const secur
 
 void passport::deletePassportAccount(const std::string& accountId) {
 	try {
-		CLITools::callFunc<void>("DeletePassportAccount", accountId);
+        callPassportFunc<void>("DeletePassportAccount", accountId);
 	} catch (Exception^ e) {
 		throw convertException(e);
 	}
@@ -273,6 +288,70 @@ bool credentials::isEncrypted(const std::wstring& target) {
 	} else {
 		throw std::runtime_error("Could not check if data is encrypted");
 	}
+}
+
+template<class T, class... Args>
+T callPasswordVaultFunc(String^ s, Args... args) {
+    return CLITools::callFunc<T>("CSNodeMsPassport.PasswordVault", s, std::forward<Args>(args)...);
+}
+
+password_vault::login_data::login_data(std::wstring user, secure_wstring pass) :
+	username(std::move(user)), password(std::move(pass)) {}
+
+bool password_vault::accountExists(const std::wstring& resource, const std::wstring& username) {
+    try {
+        return callPasswordVaultFunc<bool>("AccountExists", resource, username);
+	} catch (Exception^ e) {
+        throw getRuntimeError(e);
+	}
+}
+
+void password_vault::store(const std::wstring& resource, const login_data& data) {
+    try {
+        callPasswordVaultFunc<void>("Store", resource, data.username, data.password);
+	} catch (Exception^ e) {
+        throw getRuntimeError(e);
+	}
+}
+
+password_vault::login_data password_vault::retrieve(const std::wstring& resource, const std::wstring& username) {
+    try {
+        return callPasswordVaultFunc<login_data>("Retrieve", resource, username);
+	} catch (Exception^ e) {
+        throw getRuntimeError(e);
+	}
+}
+
+void password_vault::remove(const std::wstring &resource, const std::wstring &username) {
+    try {
+		callPasswordVaultFunc<void>("Remove", resource, username);
+	} catch (Exception^ e) {
+        throw getRuntimeError(e);
+	}
+}
+
+std::vector<password_vault::login_data> password_vault::retrieveByResource(const std::wstring& resource) {
+    try {
+        return callPasswordVaultFunc<std::vector<login_data>>("RetrieveByResource", resource);
+	} catch (Exception^ e) {
+        throw getRuntimeError(e);
+	}
+}
+
+std::vector<password_vault::login_data> password_vault::retrieveByUsername(const std::wstring& username) {
+    try {
+        return callPasswordVaultFunc<std::vector<login_data>>("RetrieveByUsername", username);
+    } catch (Exception ^ e) {
+        throw getRuntimeError(e);
+    }
+}
+
+std::vector<password_vault::login_data> password_vault::retrieveAll() {
+    try {
+        return callPasswordVaultFunc<std::vector<login_data>>("RetrieveAll");
+    } catch (Exception ^ e) {
+        throw getRuntimeError(e);
+    }
 }
 
 bool passwords::encrypt(secure_wstring& data) {

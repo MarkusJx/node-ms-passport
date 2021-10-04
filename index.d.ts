@@ -187,6 +187,112 @@ export class passport {
     public static verifySignature(challenge: Buffer, signature: Buffer, publicKey: Buffer): Promise<boolean>;
 }
 
+class Credential {
+    public readonly resource: string | null;
+    public readonly username: string;
+    public readonly password: string | null;
+
+    /**
+     * Create a new credential instance
+     * 
+     * @param resource the name of the resource
+     * @param username the user name to store
+     * @param password the password to store
+     */
+    public constructor(resource: string | null, username: string, password: string);
+
+    /**
+     * Remove this data from the password vault
+     */
+    public remove(): void;
+
+    /**
+     * Update the password
+     * 
+     * @param password the new password
+     */
+    public updatePassword(password: string): void;
+
+    /**
+     * Fetch the password from the password vault
+     */
+    public fetchPassword(): void;
+
+    /**
+     * Clear the password field
+     */
+    public clearPassword(): void;
+}
+
+/**
+ * The windows password vault
+ */
+export class PasswordVault {
+    public static readonly Credential: typeof Credential;
+    public readonly resource: string;
+
+    /**
+     * Create a PasswordVault instance
+     * 
+     * @param resource the name of the instance
+     */
+    public constructor(resource: string);
+
+    /**
+     * Check if an account with a specific username exists
+     * 
+     * @param username the username to search for
+     * @returns true if the account exists
+     */
+    public accountExists(username: string): boolean;
+
+    /**
+     * Store a new account under the current resource
+     * 
+     * @param username the username to store
+     * @param password the password to store
+     */
+    public store(username: string, password: string): void;
+
+    /**
+     * Retrieve some data by a username from the password vault.
+     * Throws an exception if the account does not exist.
+     * 
+     * @param username the username to search for
+     * @returns the retrieved credential
+     */
+    public retrieve(username: string): Credential;
+
+    /**
+     * Remove an account from the password vault
+     * 
+     * @param username the username to remove
+     */
+    public remove(username: string): void;
+
+    /**
+     * Retrieve all logins under this credentials
+     * 
+     * @return the retrieved credentials
+     */
+    public retrieveByResource(): Credential[];
+
+    /**
+     * Retrive all logins with a specific username
+     * 
+     * @param username the username to search for
+     * @returns the retrieved credentials
+     */
+    public static retrieveByUsername(username: string): Credential[];
+
+    /**
+     * Retrieve all data from the credential vailt
+     * 
+     * @return the retrieved credentials
+     */
+    public static retrieveAll(): Credential[];
+}
+
 /**
  * Windows credential storage for node js
  */

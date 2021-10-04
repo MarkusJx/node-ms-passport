@@ -8,7 +8,8 @@ set(DOTNET_FRAMEWORK_VERSION "v4.7.2")
 include(CSharpUtilities)
 
 set(CS_SRC "${CMAKE_SOURCE_DIR}/cs_src")
-set(CSHARP_SRC ${CS_SRC}/Passport.cs ${CS_SRC}/SubjectPublicKeyinfo.cs ${CS_SRC}/Exceptions.cs)
+set(CSHARP_SRC ${CS_SRC}/Passport.cs ${CS_SRC}/SubjectPublicKeyinfo.cs ${CS_SRC}/Exceptions.cs
+        ${CS_SRC}/PasswordVault.cs ${CS_SRC}/LoginData.cs)
 add_library(CSNodeMsPassport SHARED ${CSHARP_SRC})
 
 # Find windows.winmd
@@ -40,7 +41,7 @@ set_target_properties(CSNodeMsPassport PROPERTIES
 set(CMAKE_CXX_STANDARD 17)
 set(CPP_SRC "${CMAKE_SOURCE_DIR}/cpp_src")
 set(CS_WRAPPER_SRC ${CPP_SRC}/NodeMsPassport.cpp ${CPP_SRC}/NodeMsPassport.hpp
-		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp)
+		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp ${CPP_SRC}/util.hpp)
 
 add_library(NodeMsPassport STATIC ${CS_WRAPPER_SRC})
 

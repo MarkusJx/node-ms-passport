@@ -16,12 +16,26 @@ String^ CLITools::getDllLocation() {
 	return std_string_to_string(cSharpDllLocation);
 }
 
-void CLITools::callVoidPassportFunction(String^ name, array<Object^>^ data) {
+void CLITools::callVoidCSFunction(String^ cls, String^ name, array<Object^>^ data) {
 	String^ dll = std_string_to_string(cSharpDllLocation) + "CSNodeMsPassport.dll";
 	Assembly^ assembly = Assembly::LoadFrom(dll);
-	MethodInfo^ m = assembly->GetType("CSNodeMsPassport.Passport")->GetMethod(name);
+	MethodInfo^ m = assembly->GetType(cls)->GetMethod(name);
 
 	m->Invoke(nullptr, data);
+}
+
+password_vault::login_data CLITools::convertLoginData(Object^ data) {
+    String ^ dll = getDllLocation() + "CSNodeMsPassport.dll";
+    Assembly ^ assembly = Assembly::LoadFrom(dll);
+    Type^ LoginData = data->GetType();
+
+	String^ username_cs = static_cast<String^>(LoginData->GetField("Username")->GetValue(data));
+	String^ password_cs = static_cast<String^>(LoginData->GetField("Password")->GetValue(data));
+
+	std::wstring username = string_to_std_wstring(username_cs);
+    secure_wstring password = string_to_secure_wstring(password_cs);
+
+	return password_vault::login_data(username, password);
 }
 
 std::string CLITools::wstring_to_string(const std::wstring& in) {
@@ -39,19 +53,42 @@ std::string CLITools::wstring_to_string(const std::wstring& in) {
 }
 
 std::string CLITools::string_to_std_string(String^ s) {
-	array<wchar_t>^ arr = s->ToCharArray();
-	int size = arr->Length;
-	std::wstring out(size, '\0');
-	for (int i = 0; i < size; i++) {
-		out[i] = arr[i];
-	}
+	return wstring_to_string(string_to_std_wstring(s));
+}
 
-	return wstring_to_string(out);
+std::wstring CLITools::string_to_std_wstring(String^ s) {
+    array<wchar_t> ^ arr = s->ToCharArray();
+    int size = arr->Length;
+    std::wstring out(size, '\0');
+    for (int i = 0; i < size; i++) {
+        out[i] = arr[i];
+    }
+
+	return out;
+}
+
+secure_wstring CLITools::string_to_secure_wstring(String^ s) {
+    array<wchar_t> ^ arr = s->ToCharArray();
+    int size = arr->Length;
+    secure_wstring out(size, '\0');
+    for (int i = 0; i < size; i++) {
+        out[i] = arr[i];
+    }
+
+	return out;
 }
 
 String^ CLITools::std_string_to_string(const std::string& in) {
 	std::wstring w_str = std::wstring(in.begin(), in.end());
 	return gcnew String(w_str.c_str());
+}
+
+String^ CLITools::std_wstring_to_string(const std::wstring &in) {
+    return gcnew String(in.c_str());
+}
+
+String^ CLITools::secure_wstring_to_string(const secure_wstring &in) {
+    return gcnew String(in.c_str());
 }
 
 secure_vector<byte> CLITools::byteArrayToVector(array<byte>^ data) {

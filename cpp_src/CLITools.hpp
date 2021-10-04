@@ -38,6 +38,22 @@ namespace CLITools {
 	std::string string_to_std_string(String^ s);
 
 	/**
+	 * Convert a System::String to a std::wstring
+	 * 
+	 * @param s the String to convert
+	 * @return the converted wide string
+	 */
+	std::wstring string_to_std_wstring(String^ s);
+
+	/**
+	 * Convert a System::String to a secure_wstring
+	 * 
+	 * @param s the String to convert
+	 * @return the converted secure_wstring
+	 */
+	secure_wstring string_to_secure_wstring(String^ s);
+
+	/**
 	 * Convert a unmanaged character array to a managed string.
 	 * Does not delete the character array.
 	 * Source: https://stackoverflow.com/a/39249779
@@ -46,6 +62,22 @@ namespace CLITools {
 	 * @return the System::String
 	 */
 	String^ std_string_to_string(const std::string& in);
+
+	/**
+	 * Convert a std::wstring to a System::String
+	 * 
+	 * @param in the wide string to convert
+	 * @return the converted String object
+	 */
+	String^ std_wstring_to_string(const std::wstring &in);
+
+	/**
+	 * Convert a secure_wstring to a System::String
+	 * 
+	 * @param in the secure_string to convert
+	 * @return the converted String object
+	 */
+	String^ secure_wstring_to_string(const secure_wstring &in);
 
 	/**
 	* Convert a managed byte array to a character array.
@@ -77,15 +109,16 @@ namespace CLITools {
 	 * Call a passport function
 	 *
 	 * @tparam T the output type
+	 * @param cls the name of the class where the function is located
 	 * @param name the name of the function to call
 	 * @param data the data to pass on to the function
 	 * @return the function return value
 	 */
 	template<class T>
-	inline T callPassportFunction(String^ name, array<Object^ >^ data) {
+	inline T callCSFunction(String^ cls, String^ name, array<Object^ >^ data) {
 		String^ dll = getDllLocation() + "CSNodeMsPassport.dll";
 		Assembly^ assembly = Assembly::LoadFrom(dll);
-		MethodInfo^ m = assembly->GetType("CSNodeMsPassport.Passport")->GetMethod(name);
+		MethodInfo^ m = assembly->GetType(cls)->GetMethod(name);
 
 		return static_cast<T>(m->Invoke(nullptr, data));
 	}
@@ -93,10 +126,11 @@ namespace CLITools {
 	/**
 	 * Call a passport void function
 	 *
+	 * @param cls the name of the class where the function is located
 	 * @param name the name of the function to call
 	 * @param data the data to pass on to the function
 	 */
-	void callVoidPassportFunction(String^ name, array<Object^>^ data);
+	void callVoidCSFunction(String^ cls, String^ name, array<Object^>^ data);
 
 	/**
 	 * Convert any C++ type to a managed object
@@ -107,17 +141,22 @@ namespace CLITools {
 	 */
 	template<class T>
 	inline Object^ anyToObject(const T& val) {
-		static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, secure_vector<byte>>);
+		static_assert(std::is_same_v<T, std::string> || std::is_same_v<T, secure_vector<byte>> ||
+			std::is_same_v<T, std::wstring> || std::is_same_v<T, secure_wstring>);
 		if constexpr (std::is_same_v<T, std::string>) {
 			return std_string_to_string(val);
 		} else if constexpr (std::is_same_v<T, secure_vector<byte>>) {
 			return byteVectorToArray(val);
-		}
+        } else if constexpr (std::is_same_v<T, std::wstring>) {
+            return std_wstring_to_string(val);
+        } else if constexpr (std::is_same_v<T, secure_wstring>) {
+			return secure_wstring_to_string(val);
+        }
 	}
 
 	/**
 	 * Convert template arguments to an object array
-	 * 
+	 *
 	 * @tparam Args the argument types
 	 * @param args the actual arguments
 	 * @return the managed object array
@@ -136,6 +175,15 @@ namespace CLITools {
 	}
 
 	/**
+	 * Convert a CSNodeMsPassport.PasswordVault.LoginData object
+	 * to a password_vault::login_data object
+	 *
+	 * @param data the object to convert
+	 * @return the converted data
+	 */
+	password_vault::login_data convertLoginData(Object^ data);
+
+	/**
 	 * Zero out a managed byte array
 	 *
 	 * @param arr the array to zero out
@@ -144,27 +192,46 @@ namespace CLITools {
 
 	/**
 	 * Call a C# function using reflection
-	 * 
+	 *
 	 * @tparam T the return type
 	 * @tparam Args the argument types
+	 * @param cls the name of the class where the function is located
 	 * @param name the name of the function to call
 	 * @param args the function arguments. May be empty for no arguments.
 	 * @return the function call result
 	 */
 	template<class T, class...Args>
-	inline T callFunc(String^ name, Args...args) {
-		static_assert(std::is_same_v<bool, T> || std::is_same_v<secure_vector<byte>, T> || std::is_same_v<void, T>);
+	inline T callFunc(String^ cls, String^ name, Args...args) {
+		static_assert(std::is_same_v<bool, T> || std::is_same_v<secure_vector<byte>, T> || std::is_same_v<void, T> ||
+                      std::is_same_v<password_vault::login_data, T> || std::is_same_v<std::vector<password_vault::login_data>, T>);
+
 		if constexpr (std::is_same_v<bool, T>) {
-			Boolean ret = callPassportFunction<Boolean>(name, convertArgs(args...));
+            Boolean ret = callCSFunction<Boolean>(cls, name, convertArgs(std::forward<Args>(args)...));
+			
 			return convertBoolean(ret);
 		} else if constexpr (std::is_same_v<secure_vector<byte>, T>) {
-			array<byte>^ ret = callPassportFunction<array<byte>^>(name, convertArgs(args...));
+            array<byte> ^ret = callCSFunction<array<byte> ^>(cls, name, convertArgs(std::forward<Args>(args)...));
+
 			secure_vector<byte> out = byteArrayToVector(ret);
 			clearArray(ret);
 
 			return out;
 		} else if constexpr (std::is_same_v<void, T>) {
-			callVoidPassportFunction(name, convertArgs(args...));
+            callVoidCSFunction(cls, name, convertArgs(std::forward<Args>(args)...));
+        } else if constexpr (std::is_same_v<password_vault::login_data, T>) {
+            Object ^obj = callCSFunction<Object ^>(cls, name, convertArgs(std::forward<Args>(args)...));
+
+			return convertLoginData(obj);
+        } else if constexpr (std::is_same_v<std::vector<password_vault::login_data>, T>) {
+            array<Object ^> ^ret = callCSFunction<array<Object ^> ^>(cls, name, convertArgs(std::forward<Args>(args)...));
+            std::vector<password_vault::login_data> res;
+            res.reserve(ret->Length);
+
+			for (int i = 0; i < ret->Length; ++i) {
+                res.push_back(convertLoginData(ret->GetValue(i)));
+			}
+
+			return res;
 		}
 	}
 }

@@ -57,9 +57,9 @@ class PassportError extends Error {
         this.code = code;
 
         if (typeof code !== 'number') {
-            throw new Error("Parameter 'code' must be typeof 'number'");
+            throw new TypeError("Parameter 'code' must be typeof 'number'");
         } else if (typeof message !== 'string') {
-            throw new Error("Parameter 'message' must be typeof 'string'");
+            throw new TypeError("Parameter 'message' must be typeof 'string'");
         }
     }
 
@@ -306,6 +306,96 @@ class passport {
     }
 }
 
+class PasswordVault {
+    static Credential = class {
+        constructor(resource, username, password) {
+            Object.defineProperty(this, 'resource', {
+                value: resource,
+                enumerable: true,
+                configurable: true,
+                writable: false
+            });
+
+            Object.defineProperty(this, 'username', {
+                value: username,
+                enumerable: true,
+                configurable: true,
+                writable: false
+            });
+
+            this.password = password;
+        }
+
+        remove() {
+            passport_native.passwordVaultRemove(this.resource, this.username);
+        }
+
+        updatePassword(password) {
+            passport_native.passwordVaultStore(this.resource, this.username, password);
+            this.fetchPassword();
+        }
+
+        fetchPassword() {
+            const res = passport_native.passwordVaultRetrieve(this.resource, this.username);
+            this.password = res.password;
+        }
+
+        clearPassword() {
+            this.password = null;
+        }
+    }
+
+    constructor(resource) {
+        if (typeof resource !== 'string') {
+            throw new TypeError("Parameter 'resource' must be typeof 'string'");
+        } else if (resource.length === 0) {
+            throw new TypeError("Parameter 'resource' must not be empty");
+        }
+
+        Object.defineProperty(this, 'resource', {
+            value: resource,
+            enumerable: true,
+            configurable: true,
+            writable: false
+        });
+    }
+
+    accountExists(username) {
+        return passport_native.passwordVaultAccountExists(this.resource, username);
+    }
+
+    store(username, password) {
+        passport_native.passwordVaultStore(this.resource, username, password);
+    }
+
+    retrieve(username) {
+        const res = passport_native.passwordVaultRetrieve(this.resource, username);
+        return new PasswordVault.Credential(this.resource, res.username, res.password);
+    }
+
+    remove(username) {
+        passport_native.passwordVaultRemove(this.resource, username);
+    }
+
+    retrieveByResource() {
+        return passport_native.passwordVaultRetrieveByResource(this.resource).map(e => {
+            return new PasswordVault.Credential(this.resource, e.username, e.password);
+        });
+    }
+
+    static retrieveByUsername(username) {
+        return passport_native.passwordVaultRetrieveByUsername(username).map(e => {
+            return new PasswordVault.Credential(null, e.username, e.password);
+        });
+    }
+
+    static retrieveAll() {
+        return passport_native.passwordVaultRetrieveAll().map(e => {
+            return new PasswordVault.Credential(null, e.username, e.password);
+        });
+    }
+}
+
 /**
  * Password encryption using windows APIs
  */
@@ -316,7 +406,7 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<string>} the result as hex string or null if unsuccessful
      */
-    encryptHex: async function (data) {
+    encryptHex: async function(data) {
         return await passport_native.encryptPasswordHex(data);
     },
     /**
@@ -325,7 +415,7 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<Buffer>} the result in a buffer or null if unsuccessful
      */
-    encrypt: async function (data) {
+    encrypt: async function(data) {
         return await passport_native.encryptPassword(data);
     },
     /**
@@ -334,7 +424,7 @@ const passwords = {
      * @param {string} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decryptHex: async function (data) {
+    decryptHex: async function(data) {
         return await passport_native.decryptPasswordHex(data);
     },
     /**
@@ -343,7 +433,7 @@ const passwords = {
      * @param {Buffer} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decrypt: async function (data) {
+    decrypt: async function(data) {
         return await passport_native.decryptPassword(data);
     },
     /**
@@ -352,7 +442,7 @@ const passwords = {
      * @param {string} data the data as hex string
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncryptedHex: async function (data) {
+    isEncryptedHex: async function(data) {
         return await passport_native.passwordEncryptedHex(data);
     },
     /**
@@ -361,7 +451,7 @@ const passwords = {
      * @param {Buffer} data the data in a buffer
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncrypted: async function (data) {
+    isEncrypted: async function(data) {
         return await passport_native.passwordEncrypted(data);
     }
 }
@@ -376,7 +466,7 @@ const passport_utils = {
      * @param {number} length the length of the challenge in bytes
      * @return {string} the random bytes as hex string
      */
-    generateRandomHex: function (length) {
+    generateRandomHex: function(length) {
         return passport_native.generateRandom(length);
     },
     /**
@@ -385,7 +475,7 @@ const passport_utils = {
      * @param {number} length the length of the challenge in bytes
      * @return {Buffer} the random bytes as hex string
      */
-    generateRandom: function (length) {
+    generateRandom: function(length) {
         return Buffer.from(passport_utils.generateRandomHex(length), 'hex');
     }
 }
@@ -473,6 +563,7 @@ module.exports = {
     },
     passwords: passwords,
     passport_utils: passport_utils,
+    PasswordVault: PasswordVault,
     /**
      * Passport C++ library variables
      */
