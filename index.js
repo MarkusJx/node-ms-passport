@@ -316,7 +316,7 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<string>} the result as hex string or null if unsuccessful
      */
-    encryptHex: async function (data) {
+    encryptHex: async function(data) {
         return await passport_native.encryptPasswordHex(data);
     },
     /**
@@ -325,7 +325,7 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<Buffer>} the result in a buffer or null if unsuccessful
      */
-    encrypt: async function (data) {
+    encrypt: async function(data) {
         return await passport_native.encryptPassword(data);
     },
     /**
@@ -334,7 +334,7 @@ const passwords = {
      * @param {string} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decryptHex: async function (data) {
+    decryptHex: async function(data) {
         return await passport_native.decryptPasswordHex(data);
     },
     /**
@@ -343,7 +343,7 @@ const passwords = {
      * @param {Buffer} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decrypt: async function (data) {
+    decrypt: async function(data) {
         return await passport_native.decryptPassword(data);
     },
     /**
@@ -352,7 +352,7 @@ const passwords = {
      * @param {string} data the data as hex string
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncryptedHex: async function (data) {
+    isEncryptedHex: async function(data) {
         return await passport_native.passwordEncryptedHex(data);
     },
     /**
@@ -361,7 +361,7 @@ const passwords = {
      * @param {Buffer} data the data in a buffer
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncrypted: async function (data) {
+    isEncrypted: async function(data) {
         return await passport_native.passwordEncrypted(data);
     }
 }
@@ -376,7 +376,7 @@ const passport_utils = {
      * @param {number} length the length of the challenge in bytes
      * @return {string} the random bytes as hex string
      */
-    generateRandomHex: function (length) {
+    generateRandomHex: function(length) {
         return passport_native.generateRandom(length);
     },
     /**
@@ -385,7 +385,7 @@ const passport_utils = {
      * @param {number} length the length of the challenge in bytes
      * @return {Buffer} the random bytes as hex string
      */
-    generateRandom: function (length) {
+    generateRandom: function(length) {
         return Buffer.from(passport_utils.generateRandomHex(length), 'hex');
     }
 }
@@ -471,6 +471,8 @@ module.exports = {
             return await passport_native.credentialEncrypted(this.accountId);
         }
     },
+    CredentialStore: passport_native.CredentialStore,
+    Credential: passport_native.Credential,
     passwords: passwords,
     passport_utils: passport_utils,
     /**

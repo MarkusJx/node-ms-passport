@@ -235,6 +235,48 @@ export class credentialStore {
     public isEncrypted(): Promise<boolean>;
 }
 
+export class Credential {
+    private constructor(accountId: string, username: string, password: Buffer, encrypt: boolean);
+
+    public get accountId(): string;
+
+    public get username(): string;
+
+    public get password(): string | null;
+
+    public get encrypted(): boolean;
+
+    public loadPassword(): Promise<void>;
+
+    public unloadPassword(): Promise<void>;
+
+    public refreshData(): Promise<void>;
+
+    public update(username: string, password: string): Promise<void>;
+
+    public setEncrypted(encrypt: boolean): Promise<void>;
+
+    public isEncrypted(): Promise<boolean>;
+}
+
+export class CredentialStore {
+    public constructor(accountId: string, encrypt?: boolean);
+
+    public get accountId(): string;
+
+    public get encryptPasswords(): string;
+
+    public write(username: string, password: string): Promise<void>;
+
+    public read(): Promise<Credential>;
+
+    public remove(): Promise<void>;
+
+    public exists(): Promise<boolean>;
+
+    public isEncrypted(): Promise<boolean>;
+}
+
 /**
  * Password encryption using windows APIs
  */

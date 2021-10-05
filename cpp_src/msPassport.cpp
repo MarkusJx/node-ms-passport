@@ -5,6 +5,8 @@
 #include <iostream>
 #include <napi_tools.hpp>
 
+#include "node_classes/credential_store.hpp"
+#include "node_classes/credential.hpp"
 #include "NodeMsPassport.hpp"
 
 using namespace nodeMsPassport;
@@ -419,6 +421,9 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
 
 	EXPORT_FUNCTION(exports, env, generateRandom);
 	EXPORT_FUNCTION(exports, env, setCSharpDllLocation);
+
+	node_classes::credential_store::init(env, exports);
+    node_classes::credential::init(env, exports);
 
 	return exports;
 }

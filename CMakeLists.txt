@@ -40,7 +40,7 @@ set_target_properties(CSNodeMsPassport PROPERTIES
 set(CMAKE_CXX_STANDARD 17)
 set(CPP_SRC "${CMAKE_SOURCE_DIR}/cpp_src")
 set(CS_WRAPPER_SRC ${CPP_SRC}/NodeMsPassport.cpp ${CPP_SRC}/NodeMsPassport.hpp
-		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp)
+		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp ${CPP_SRC}/util.hpp)
 
 add_library(NodeMsPassport STATIC ${CS_WRAPPER_SRC})
 
@@ -53,7 +53,9 @@ set_property(TARGET NodeMsPassport PROPERTY VS_DOTNET_REFERENCES
         "mscorlib")
 
 # Build the actual node.js addon
-set(ADDON_SRC ${CMAKE_SOURCE_DIR}/cpp_src/msPassport.cpp)
+set(ADDON_SRC ${CPP_SRC}/msPassport.cpp ${CPP_SRC}/node_classes/credential_store.cpp
+		${CPP_SRC}/node_classes/credential_store.hpp ${CPP_SRC}/node_classes/credential.cpp
+		${CPP_SRC}/node_classes/credential.hpp)
 add_library(${PROJECT_NAME} SHARED ${ADDON_SRC} ${CMAKE_JS_SRC})
 
 # Get the n-api-tools include dir
@@ -77,4 +79,4 @@ string(REPLACE "\"" "" NODE_ADDON_API_DIR ${NODE_ADDON_API_DIR})
 target_include_directories(${PROJECT_NAME} PRIVATE ${NODE_ADDON_API_DIR})
 
 # define NPI_VERSION
-add_definitions(-DNAPI_VERSION=4)
+add_definitions(-DNAPI_VERSION=6)
