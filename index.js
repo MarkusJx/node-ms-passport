@@ -103,7 +103,7 @@ const errorCodes = {
 /**
  * Microsoft passport for node js
  */
-class passport {
+class Passport {
     /**
      * Create a passport instance
      * 
@@ -393,7 +393,7 @@ const passport_utils = {
 module.exports = {
     PassportError: PassportError,
     errorCodes: errorCodes,
-    passport: passport,
+    Passport: Passport,
     CredentialStore: passport_native.CredentialStore,
     Credential: passport_native.Credential,
     passwords: passwords,

@@ -84,7 +84,7 @@ export class PassportError extends Error {
 /**
  * Microsoft passport for node js
  */
-export class passport {
+export class Passport {
     // The id of the passport account
     public readonly accountId: string;
     // Whether the passport account exists
@@ -188,31 +188,106 @@ export class passport {
 }
 
 /**
- * A stored credential blob
+ * A stored credential blob.
+ * The password is stored in encrypted form
+ * in the memory and is decrypted once
+ * {@link loadPassword} is called. After that
+ * the plain password can be retrieved. Call
+ * {@link unloadPassword} to encrypt the password.
+ *
+ * Note: All password operations are synchronized
+ * which may lead to your application freezing
+ * if there are multiple password operations
+ * running at once so make sure to only call
+ * one (synchronized) operation at a time.
  */
 export class Credential {
+    /**
+     * Create a credential instance.
+     * Just for internal use. Do not call directly.
+     * Use {@link CredentialStore.read} instead.
+     *
+     * @param accountId the account id
+     * @param username the username
+     * @param password the password to store
+     * @param encrypt whether to store the password in encrypted form
+     * @private
+     */
     private constructor(accountId: string, username: string, password: Buffer, encrypt: boolean);
 
+    /**
+     * Get the account id
+     */
     public get accountId(): string;
 
+    /**
+     * Get the username
+     */
     public get username(): string;
 
+    /**
+     * Get the password
+     */
     public get password(): string | null;
 
+    /**
+     * Check if the password is stored in encrypted form
+     */
     public get encrypted(): boolean;
 
+    /**
+     * Get the password as a uint16_t buffer
+     *
+     * @return the password in a buffer
+     */
     public get passwordBuffer(): Buffer | null;
 
+    /**
+     * Load the password.
+     * Call this to actually access the password.
+     * If the password is already loaded, this is a no-op.
+     */
     public loadPassword(): Promise<void>;
 
+    /**
+     * Unload the password.
+     * After this, the password can no longer be accessed.
+     * Call {@link loadPassword} to load it again.
+     * If the password is already unloaded, this is a no-op.
+     */
     public unloadPassword(): Promise<void>;
 
+    /**
+     * Refresh the stored data with the
+     * data in the credential vault
+     */
     public refreshData(): Promise<void>;
 
+    /**
+     * Update the data
+     *
+     * @param username the new user name
+     * @param password the new password
+     */
     public update(username: string, password: string): Promise<void>;
 
+    /**
+     * Set whether to encrypt the password.
+     * Encrypts/Decrypts and stores the new
+     * password value in the password vault.
+     * If this value matches the current value,
+     * this is a no-op.
+     *
+     * @param encrypt whether to encrypt the password
+     */
     public setEncrypted(encrypt: boolean): Promise<void>;
 
+    /**
+     * Check if the password is encrypted
+     * in the credential storage
+     *
+     * @return true if the password is encrypted
+     */
     public isEncrypted(): Promise<boolean>;
 }
 
@@ -220,20 +295,56 @@ export class Credential {
  * Windows credential store for node.js
  */
 export class CredentialStore {
+    /**
+     * Create a new credential store instance
+     *
+     * @param accountId the id of the account
+     * @param encrypt whether to encrypt the password. Defaults to true.
+     */
     public constructor(accountId: string, encrypt?: boolean);
 
+    /**
+     * Get the account id
+     */
     public get accountId(): string;
 
-    public get encryptPasswords(): string;
+    /**
+     * Get whether the password will be encrypted
+     */
+    public get encryptPasswords(): boolean;
 
+    /**
+     * Write a username and a password to the credential store
+     *
+     * @param username the username to write
+     * @param password the password to write
+     */
     public write(username: string, password: string): Promise<void>;
 
+    /**
+     * Read the credential from the store
+     *
+     * @return the read credential data
+     */
     public read(): Promise<Credential>;
 
+    /**
+     * Remove this account from the credential store
+     */
     public remove(): Promise<void>;
 
+    /**
+     * Check whether the account exists
+     *
+     * @return true if the account exists
+     */
     public exists(): Promise<boolean>;
 
+    /**
+     * Check whether the password is encrypted
+     *
+     * @return true if the password is actually encrypted
+     */
     public isEncrypted(): Promise<boolean>;
 }
 

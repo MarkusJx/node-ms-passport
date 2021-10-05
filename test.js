@@ -1,13 +1,13 @@
 const assert = require("assert");
-const { passport, passport_utils, passwords, credentialStore } = require('./index');
+const { Passport, passport_utils, passwords, CredentialStore } = require('./index');
 
 describe('Passport hex test', function () {
     let publicKey, challenge, signed;
     it('Checking if passport is available', () => {
-        assert(passport.passportAvailable());
+        assert(Passport.passportAvailable());
     });
 
-    const pass = new passport("test_hex");
+    const pass = new Passport("test_hex");
     it('Creating passport key', async function () {
         this.timeout(0); // No timeout since this requires user interaction
         await pass.createPassportKey();
@@ -30,23 +30,23 @@ describe('Passport hex test', function () {
     });
 
     it('Verifying signature', async function () {
-        const signatureMatches = await passport.verifySignatureHex(challenge, signed, publicKey);
+        const signatureMatches = await Passport.verifySignatureHex(challenge, signed, publicKey);
         assert(signatureMatches);
     });
 
     it('Deleting passport key', async () => {
         await pass.deletePassportAccount();
-        assert.strictEqual(passport.passportAccountExists("test_hex"), false);
+        assert.strictEqual(Passport.passportAccountExists("test_hex"), false);
     });
 });
 
 describe('Passport test', function () {
     let publicKey, challenge, signed;
     it('Checking if passport is available', () => {
-        assert(passport.passportAvailable());
+        assert(Passport.passportAvailable());
     });
 
-    const pass = new passport("test");
+    const pass = new Passport("test");
     it('Creating passport key', async function () {
         this.timeout(0); // No timeout since this requires user interaction
         await pass.createPassportKey();
@@ -69,51 +69,60 @@ describe('Passport test', function () {
     });
 
     it('Verifying signature', async function () {
-        const signatureMatches = await passport.verifySignature(challenge, signed, publicKey);
+        const signatureMatches = await Passport.verifySignature(challenge, signed, publicKey);
         assert(signatureMatches);
     });
 
     it('Deleting passport key', async () => {
         await pass.deletePassportAccount();
-        assert.strictEqual(passport.passportAccountExists("test"), false);
+        assert.strictEqual(Passport.passportAccountExists("test"), false);
     });
 });
 
 describe('Credential manager test', function () {
     describe('with encryption', () => {
-        const cred = new credentialStore("test/test", true);
+        const cred = new CredentialStore("test/test", true);
         it('Credential write', async function () {
-            assert(await cred.write("test", "testPassword"));
+            await cred.write("test", "testPassword");
+            assert.ok(await cred.exists());
         });
 
         it('Credential read', async () => {
             const read = await cred.read();
             assert.notStrictEqual(read, null);
             assert.strictEqual(read.username, "test");
-            assert.strictEqual(read.password, "testPassword");
+            assert.strictEqual(read.password, null);
+
+            await read.loadPassword();
+            assert.strictEqual(read.password, "testPassword")
         });
 
         it('Password encrypted check', async () => {
             const encrypted = await cred.isEncrypted();
-            assert(encrypted);
+            assert.ok(encrypted);
         });
 
         it('Credential delete', async () => {
-            assert(await cred.remove());
+            await cred.remove();
+            assert.ok(!await cred.exists());
         });
     });
 
     describe('without encryption', function () {
-        const cred = new credentialStore("test/testRaw", false);
+        const cred = new CredentialStore("test/testRaw", false);
         it('Credential write', async () => {
-            assert(await cred.write("test", "testPassword"));
+            await cred.write("test", "testPassword");
+            assert.ok(await cred.exists());
         });
 
         it('Credential read', async () => {
             const read = await cred.read();
             assert.notStrictEqual(read, null);
             assert.strictEqual(read.username, "test");
-            assert.strictEqual(read.password, "testPassword");
+            assert.strictEqual(read.password, null);
+
+            await read.loadPassword();
+            assert.strictEqual(read.password, "testPassword")
         });
 
         it('Password encrypted check', async () => {
@@ -122,7 +131,109 @@ describe('Credential manager test', function () {
         });
 
         it('Credential delete', async () => {
-            assert(await cred.remove());
+            await cred.remove();
+            assert.ok(!await cred.exists());
+        });
+    });
+
+    describe('Credential test', function () {
+        const store = new CredentialStore("test/test", true);
+        /**
+         * @type {Credential}
+         */
+        let cred = null;
+        it('Read', async () => {
+            await store.write("test", "testPassword");
+            assert.ok(await store.exists());
+
+            cred = await store.read();
+        });
+
+        it('Account id read', () => {
+            assert.strictEqual(cred.accountId, "test/test");
+        });
+
+        it('Username read', () => {
+            assert.strictEqual(cred.username, "test");
+        });
+
+        it('Password read', () => {
+            assert.strictEqual(cred.password, null);
+        });
+
+        it('Password load', async () => {
+            assert.strictEqual(cred.password, null);
+
+            await cred.loadPassword();
+            assert.strictEqual(cred.password, "testPassword");
+        });
+
+        it('Password buffer check', () => {
+            assert.ok(cred.passwordBuffer.length > 0);
+        });
+
+        it('Password unload', async () => {
+            assert.strictEqual(cred.password, "testPassword");
+
+            await cred.unloadPassword();
+            assert.strictEqual(cred.password, null);
+        });
+
+        it('Is encrypted check', async () => {
+            assert.ok(cred.encrypted);
+            assert.ok(await cred.isEncrypted());
+        });
+
+        it('Update', async () => {
+            await cred.loadPassword();
+            await cred.update("newUser", "newPass");
+
+            assert.strictEqual(cred.username, "newUser");
+            assert.strictEqual(cred.password, null);
+
+            await cred.loadPassword();
+            assert.strictEqual(cred.password, "newPass");
+        });
+
+        it('Refresh data', async () => {
+            const c1 = await store.read();
+            await c1.loadPassword();
+            assert.strictEqual(c1.username, "newUser");
+            assert.strictEqual(c1.password, "newPass");
+
+            await c1.update("user", "pass");
+            assert.strictEqual(c1.username, "user");
+            assert.strictEqual(c1.password, null);
+
+            await c1.loadPassword();
+            assert.strictEqual(c1.password, "pass");
+
+            await cred.refreshData();
+            assert.strictEqual(cred.username, "user");
+            assert.strictEqual(cred.password, null);
+
+            await cred.loadPassword();
+            assert.strictEqual(cred.password, "pass");
+        });
+
+        it('Set encrypted', async () => {
+            await cred.setEncrypted(false);
+            assert.ok(!cred.encrypted);
+            assert.ok(!await cred.isEncrypted());
+            assert.ok(!await store.isEncrypted());
+            assert.strictEqual(cred.password, null);
+
+            await cred.loadPassword();
+            assert.strictEqual(cred.password, "pass");
+
+            await cred.setEncrypted(true);
+            assert.ok(cred.encrypted);
+            assert.ok(await cred.isEncrypted());
+            assert.ok(await store.isEncrypted());
+            assert.strictEqual(cred.password, null);
+
+            await cred.loadPassword();
+            assert.strictEqual(cred.password, "pass");
         });
     });
 });

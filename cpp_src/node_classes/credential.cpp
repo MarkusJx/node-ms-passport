@@ -165,7 +165,7 @@ Napi::Value credential::update(const Napi::CallbackInfo &info) {
     std::u16string user = info[0].ToString().Utf16Value();
     auto u = std::wstring(user.begin(), user.end());
 
-    std::u16string pass = info[0].ToString().Utf16Value();
+    std::u16string pass = info[1].ToString().Utf16Value();
     auto p = secure_wstring(pass.begin(), pass.end());
     zero_string(pass);
 

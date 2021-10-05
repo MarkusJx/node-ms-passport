@@ -38,13 +38,13 @@ or with installed workloads:
 
 To use it, simply define
 ```js
-const {passport} = require('node-ms-passport');
+const {Passport} = require('node-ms-passport');
 ```
 
 #### ``static passport.passportAvailable(): boolean``
 Check if Microsoft passport is available on this system:
 ```js
-if (passport.passportAvailable()) {
+if (Passport.passportAvailable()) {
     // MS Passport is available
 } else {
     // MS Passport is not available
@@ -54,7 +54,7 @@ if (passport.passportAvailable()) {
 #### ``static passportAccountExists(accountId: string): boolean``
 Check if a passport account exists:
 ```js
-if (passport.passportAccountExists("SOME_ID")) {
+if (Passport.passportAccountExists("SOME_ID")) {
     // The passport account with the id exists
 } else {
     // The account does not exist
@@ -64,19 +64,19 @@ if (passport.passportAccountExists("SOME_ID")) {
 #### ``static verifySignatureHex(challenge: string, signature: string, publicKey: string): Promise<boolean>``
 Verify a signature (all arguments as hex-encoded strings):
 ```js
-const matches = await passport.verifySignatureHex(CHALLENGE, SIGNATURE, PUBLICKEY);
+const matches = await Passport.verifySignatureHex(CHALLENGE, SIGNATURE, PUBLICKEY);
 ```
 
 #### ``static verifySignature(challenge: Buffer, signature: Buffer, publicKey: Buffer): Promise<boolean>``
 Verify a signature:
 ```js
-const matches = await passport.verifySignature(CHALLENGE, SIGNATURE, PUBLICKEY);
+const matches = await Passport.verifySignature(CHALLENGE, SIGNATURE, PUBLICKEY);
 ```
 
 #### ``new passport(accountId: string)``
 Create a new instance of the passport class
 ```js
-const pass = new passport("SOME_ID");
+const pass = new Passport("SOME_ID");
 ```
 If the account already exists, ``passport.accountExists``
 will be set to ``true``.
@@ -163,48 +163,139 @@ enum errorCodes {
 It also supports the windows credential vault. Passwords will be encrypted by default.
 To use it, simply define
 ```js
-const {credentialStore} = require('node-ms-passport');
+const {CredentialStore} = require('node-ms-passport');
 ```
 
 #### ``new credentialStore(accountId: string, encryptPasswords: boolean = true)``
-Create a new ``credentialStore`` instance. Takes an account id and a
+Create a new ``CredentialStore`` instance. Takes an account id and a
 boolean which controls whether to encrypt the stored password.
 ```js
-const store = new credentialStore("some/id", true);
+const store = new CredentialStore("some/id", true);
 ```
 
-#### ``write(user: string, password: string): Promise<boolean>``
-Store a username and password. Returns true, if the operation was successful.
+#### ``get accountId(): string``
+Get the stored account id
+
+#### ``get encryptPasswords(): boolean``
+Check if the passwords will be encrypted
+
+#### ``write(user: string, password: string): Promise<void>``
+Store a username and password. Throws on error.
 ```js
 let ok = await store.write("username", "pa$$word");
 ```
 
-#### ``read(): Promise<credentialReadResult | null>``
+#### ``read(): Promise<Credential>``
 Read a username and password from the credential vault.
-Returns a ``credentialReadResult`` on success storing the username
-and password or ``null`` if the operation failed.
+Returns a ``Credential`` on success storing the username
+and password. Throws an error if the operation failed.
 ```js
-let res = await store.read();
-if (res === null) {
-    // The operation failed
-} else {
-    // The operation was successful
-    let user = res.username;
-    let pass = res.password;
-}
+let cred = await store.read();
 ```
 
-#### ``remove(): Promise<boolean>`` 
+#### ``remove(): Promise<void>`` 
 Remove a username and password from the credential vault.
-Returns ``true`` if the operation failed.
+Throws on error.
 ```js
-let ok = await store.remove();
+await store.remove();
 ```
 
 #### ``isEncrypted(): Promise<boolean>``
 Check if the password in the credential vault is encrypted:
 ```js
 let encrypted = store.isEncrypted();
+```
+
+#### ``exists(): Promise<boolean>``
+Check if the account exists:
+```js
+if (await store.isEncrypted()) {
+    // Do something like
+    let cred = await store.read();
+}
+```
+
+#### Credential class
+Credentials are stored using the ``Credential class``.
+The password is stored in an encrypted form until
+``loadPassword()`` is called.
+
+##### Get a ``Credential`` instance
+```js
+// Create a new credential store instance
+const store = new CredentialStore("some/id", true);
+
+// Read the data. Throws if the data does not exist.
+const cred = await store.read();
+```
+
+##### ``get accountId(): string``
+Get the account id
+
+##### ``get username(): string``
+Get the username
+
+##### ``get password(): string | null``
+Get the password. Returns ``null`` if the password is not loaded.
+In this case you should call ``loadPassword()`` to load
+the password. After that, the plain text password will be returned.
+
+##### ``get encrypted(): boolean``
+Check if the password will be stored in an encrypted form.
+Does not represent if the password is *actually* stored in an encrypted form.
+
+##### ``get passwordBuffer(): Buffer | null``
+Get the password in a ``char16_t`` buffer.
+Returns ``null`` if the password is not loaded.
+
+##### ``loadPassword(): Promise<void>``
+Load the password to retrieve it later on.
+If the password is already loaded, this is a no-op.
+```js
+// Get the password
+let password = cred.password;
+if (password == null) {
+    // The password is not loaded, load it
+    await cred.loadPassword();
+    // The password is now retrieved
+    password = cred.password;
+} else {
+    // The password is already loaded
+}
+```
+
+##### ``unloadPassword(): Promise<void>``
+Unloads the password. The password get operation
+will return ``null`` after this is called.
+If the password is not loaded, this is a no-op.
+
+##### ``refreshData(): Promise<void>``
+Refresh the cached data with the data actually
+stored in the password vault.
+
+##### ``update(username: string, password: string): Promise<void>``
+Update the stored username and password.
+After this call, the password will not be loaded,
+you must call ``loadPassword`` to retrieve it.
+```js
+await store.update("newUser", "newPassword");
+```
+
+##### ``setEncrypted(encrypt: boolean): Promise<void>``
+Set whether the password should be stored in encrypted form.
+Does not alter the form in which the password is stored in the memory (RAM).
+After this call, the password will not be loaded,
+you must call ``loadPassword`` to retrieve it.
+If the supplied value matches the current value, this is a no-op.
+
+##### ``ioEncrypted(): Promise<boolean>``
+Check if the password is *actually* encrypted
+in the credential store.
+```js
+await store.setEncrypted(true);
+
+let encrypted = await store.isEncrypted();
+// encrypted is now true
 ```
 
 ### Encrypt data
