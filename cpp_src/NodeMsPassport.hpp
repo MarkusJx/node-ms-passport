@@ -123,9 +123,8 @@ namespace nodeMsPassport {
 		 * @param user the user name to store
 		 * @param password the password to store
 		 * @param encrypt whether to encrypt the password
-		 * @return if the operation was successful
 		 */
-		bool write(const std::wstring& target, const std::wstring& user, const secure_wstring& password,
+		void write(const std::wstring& target, const std::wstring& user, const secure_wstring& password,
 			bool encrypt);
 
 		/**
@@ -135,33 +134,29 @@ namespace nodeMsPassport {
 		 * @param user the user name
 		 * @param password the password
 		 * @param whether the password is encrypted
-		 * @return if the operation was successful
 		 */
-		bool read(const std::wstring& target, std::wstring& user, secure_wstring& password, bool encrypt);
+		void read(const std::wstring& target, std::wstring& user, secure_wstring& password, bool encrypt);
 
 		/**
 		 * Remove a entry from the credential storage
 		 *
 		 * @param target the account id to remove
-		 * @return if the operation was successful
 		 */
-		bool remove(const std::wstring& target);
+		void remove(const std::wstring& target);
 
 		/**
 		 * Unprotect a credential
 		 * 
 		 * @param toUnprotect the string to decrypt
-		 * @returns true if the operation was successful
 		 */
-		bool unprotectCredential(secure_wstring &toUnprotect);
+		void unprotectCredential(secure_wstring &toUnprotect);
 
 		/**
 		 * Protect a credential
 		 * 
 		 * @param toProtect the string to encrypt
-		 * @returns true if the operation was successful
 		 */
-		bool protectCredential(secure_wstring &toProtect);
+		void protectCredential(secure_wstring &toProtect);
 
 		/**
 		 * Check if a password entry is encrypted
@@ -189,17 +184,15 @@ namespace nodeMsPassport {
 		 * Encrypt data using CredProtectW function
 		 *
 		 * @param data the data to encrypt, will remain unchanged if the encryption failed
-		 * @return if the operation was successful
 		 */
-		bool encrypt(secure_wstring& data);
+		void encrypt(secure_wstring& data);
 
 		/**
 		 * Decrypt data using CredUnprotectW function
 		 *
 		 * @param data the data to decrypt, will remain unchanged if the decryption failed
-		 * @return if the operation was successful
 		 */
-		bool decrypt(secure_wstring& data);
+		void decrypt(secure_wstring& data);
 
 		/**
 		 * Check if data was protected using CredProtectW
@@ -210,8 +203,21 @@ namespace nodeMsPassport {
 		bool isEncrypted(const secure_wstring& data);
 	}
 
+	/**
+	 * Get the last win32 api error as a string
+	 * 
+	 * @returns the last error code as a string
+	 */
 	std::string get_last_error_as_string();
 
+	/**
+	 * Zero out a string
+	 * 
+	 * @tparam T the character type
+	 * @tparam U the char_traits type
+	 * @tparam R the allocator type
+	 * @param str the string to zero out
+	 */
 	template<class T, class U, class R>
 	void zero_string(std::basic_string<T, U, R>& str) {
         std::fill_n((volatile char *) str.data(), str.size() * sizeof(T), 0);

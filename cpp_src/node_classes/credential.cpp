@@ -1,3 +1,4 @@
+#include <windows.h>
 #include <napi_tools.hpp>
 
 #include "credential.hpp"
@@ -41,6 +42,7 @@ void credential::init(Napi::Env env, Napi::Object &exports) {
         InstanceAccessor("username", &get_username, nullptr, napi_enumerable),
         InstanceAccessor("password", &get_password, nullptr, napi_enumerable),
         InstanceAccessor("encrypted", &get_encrypt, nullptr, napi_enumerable),
+        InstanceAccessor("passwordBuffer", &get_password_buffer, nullptr, napi_enumerable),
         InstanceMethod("loadPassword", &load_password, napi_enumerable),
         InstanceMethod("unloadPassword", &unload_password, napi_enumerable),
         InstanceMethod("refreshData", &refresh_data, napi_enumerable),
@@ -61,12 +63,9 @@ Napi::Object credential::createInstance(Napi::Env env, const std::wstring &accou
     return napi_tools::promises::promise<credential_creator>(env, [account_id, encrypt] {
         credential_creator res(account_id, encrypt);
 
-        if (!credentials::read(account_id, res.user, *res.pass, false)) {
-            throw std::runtime_error("Could not read the credentials. Error: " + get_last_error_as_string());
-        }
-
-        if (!encrypt && !credentials::protectCredential(*res.pass)) {
-            throw std::runtime_error("Could not encrypt the password. Error: " + get_last_error_as_string());
+        credentials::read(account_id, res.user, *res.pass, false);
+        if (!encrypt) {
+            credentials::protectCredential(*res.pass);
         }
 
         return res;
@@ -114,11 +113,8 @@ Napi::Value credential::load_password(const Napi::CallbackInfo &info) {
     return napi_tools::promises::promise<void>(info.Env(), [this] {
         std::unique_lock lock(mtx);
         if (!password_loaded) {
-            if (credentials::unprotectCredential(password)) {
-                password_loaded = true;
-            } else {
-                throw std::runtime_error("Could not load the password. Error: " + get_last_error_as_string());
-            }
+            credentials::unprotectCredential(password);
+            password_loaded = true;
         }
     });
 }
@@ -127,12 +123,14 @@ Napi::Value credential::unload_password(const Napi::CallbackInfo &info) {
     return napi_tools::promises::promise<void>(info.Env(), [this] {
         std::unique_lock lock(mtx);
         if (password_loaded) {
-            if (credentials::protectCredential(password)) {
-                password_loaded = false;
-            } else {
+            try {
+                credentials::protectCredential(password);
+            } catch (const std::exception& e) {
                 password.clear();
-                throw std::runtime_error("Could not unload the password. Error: " + get_last_error_as_string());
+                throw e;
             }
+
+            password_loaded = false;
         }
     });
 }
@@ -140,15 +138,21 @@ Napi::Value credential::unload_password(const Napi::CallbackInfo &info) {
 Napi::Value credential::refresh_data(const Napi::CallbackInfo &info) {
     return napi_tools::promises::promise<void>(info.Env(), [this] {
         std::unique_lock lock(mtx);
-        
-        if (!credentials::read(account_id, username, password, false)) {
+
+        try {
+            credentials::read(account_id, username, password, false);
+        } catch (const std::exception& e) {
             password.clear();
-            throw std::runtime_error("Could not read the credentials. Error: " + get_last_error_as_string());
+            throw e;
         }
 
-        if (!encrypt && !credentials::protectCredential(password)) {
-            password.clear();
-            throw std::runtime_error("Could not encrypt the password. Error: " + get_last_error_as_string());
+        if (!encrypt) {
+            try {
+                credentials::protectCredential(password);
+            } catch (const std::exception &e) {
+                password.clear();
+                throw e;
+            }
         }
 
         password_loaded = false;
@@ -167,18 +171,18 @@ Napi::Value credential::update(const Napi::CallbackInfo &info) {
 
     return napi_tools::promises::promise<void>(info.Env(), [this, u, p] {
         std::unique_lock lock(mtx);
-        if (!credentials::write(account_id, u, p, encrypt)) {
-            throw std::runtime_error("Could not store the credentials. Error: " + get_last_error_as_string());
-        }
+        credentials::write(account_id, u, p, encrypt);
 
         username = u;
         password = p;
-        if (!credentials::protectCredential(password)) {
+        try {
+            credentials::protectCredential(password);
+        } catch (const std::exception& e) {
             password.clear();
-            throw std::runtime_error("Could not encrypt the password. Error: " + get_last_error_as_string());
-        } else {
-            password_loaded = false;
+            throw e;
         }
+
+        password_loaded = false;
     });
     
 }
@@ -194,22 +198,25 @@ Napi::Value credential::set_encrypted(const Napi::CallbackInfo &info) {
             return;
         }
 
-        if (!credentials::read(account_id, username, password, encrypt)) {
+        try {
+            credentials::read(account_id, username, password, encrypt);
+        } catch (const std::exception &e) {
             password.clear();
-            throw std::runtime_error("Could not read the credentials. Error: " + get_last_error_as_string());
+            throw e;
         }
 
-        if (!credentials::write(account_id, username, password, e)) {
-            throw std::runtime_error("Could not store the credentials. Error: " + get_last_error_as_string());
-        }
+        credentials::write(account_id, username, password, e);
 
         encrypt = e;
-        if (!credentials::protectCredential(password)) {
+
+        try {
+            credentials::protectCredential(password);
+        } catch (const std::exception& e) {
             password.clear();
-            throw std::runtime_error("Could not encrypt the password. Error: " + get_last_error_as_string());
-        } else {
-            password_loaded = false;
+            throw e;
         }
+
+        password_loaded = false;
     });
 }
 
@@ -217,6 +224,22 @@ Napi::Value credential::is_encrypted(const Napi::CallbackInfo &info) {
     return napi_tools::promises::promise<bool>(info.Env(), [acc = account_id] {
         return credentials::isEncrypted(acc);
     });
+}
+
+Napi::Value credential::get_password_buffer(const Napi::CallbackInfo &info) {
+    std::unique_lock lock(mtx);
+    if (password_loaded) {
+        const size_t size = password.size();
+        auto *data = new char16_t[size];
+        memcpy(data, password.c_str(), size * sizeof(char16_t));
+
+        return Napi::Buffer<char16_t>::New(info.Env(), data, size, [size](const Napi::Env &, char16_t *data) {
+            SecureZeroMemory(data, size * sizeof(char16_t));
+            delete[] data;
+        });
+    } else {
+        return info.Env().Null();
+    }
 }
 
 Napi::FunctionReference *credential::constructor = nullptr;

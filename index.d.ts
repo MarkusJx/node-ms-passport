@@ -188,53 +188,8 @@ export class passport {
 }
 
 /**
- * Windows credential storage for node js
+ * A stored credential blob
  */
-export class credentialStore {
-    // The id of the credential account
-    public readonly accountId: string;
-    // Whether to encrypt passwords
-    public readonly encryptPasswords: boolean;
-
-    /**
-     * Create a credentialStore instance
-     * 
-     * @param accountId the id of the creadential account
-     * @param encryptPasswords whether to encrypt passwords
-     */
-    public constructor(accountId: string, encryptPasswords?: boolean);
-
-    /**
-     * Write data to the password storage
-     *
-     * @param user the user name to store
-     * @param password the password to store
-     * @return if the operation was successful
-     */
-    public write(user: string, password: string): Promise<boolean>;
-
-    /**
-     * Read data from the password storage
-     *
-     * @return the username and password or null if unsuccessful
-     */
-    public read(): Promise<credentialReadResult | null>;
-
-    /**
-     * Remove a entry from the credential storage
-     *
-     * @return if the operation was successful
-     */
-    public remove(): Promise<boolean>;
-
-    /**
-     * Check if a password entry is encrypted. Throws an error on error
-     *
-     * @return if the password is encrypted
-     */
-    public isEncrypted(): Promise<boolean>;
-}
-
 export class Credential {
     private constructor(accountId: string, username: string, password: Buffer, encrypt: boolean);
 
@@ -245,6 +200,8 @@ export class Credential {
     public get password(): string | null;
 
     public get encrypted(): boolean;
+
+    public get passwordBuffer(): Buffer | null;
 
     public loadPassword(): Promise<void>;
 
@@ -259,6 +216,9 @@ export class Credential {
     public isEncrypted(): Promise<boolean>;
 }
 
+/**
+ * Windows credential store for node.js
+ */
 export class CredentialStore {
     public constructor(accountId: string, encrypt?: boolean);
 

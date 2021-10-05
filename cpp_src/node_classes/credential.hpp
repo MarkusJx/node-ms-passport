@@ -37,6 +37,8 @@ namespace node_classes {
 
         Napi::Value is_encrypted(const Napi::CallbackInfo &info);
 
+        Napi::Value get_password_buffer(const Napi::CallbackInfo &info);
+
         std::wstring account_id;
         std::wstring username;
         nodeMsPassport::secure_wstring password;

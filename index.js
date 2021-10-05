@@ -390,87 +390,10 @@ const passport_utils = {
     }
 }
 
-/**
- * A result from a credential read operation
- * 
- * @typedef {{username: string,
- *  password: string}
- * } credentialReadResult
- */
-
 module.exports = {
     PassportError: PassportError,
     errorCodes: errorCodes,
     passport: passport,
-    credentialStore: class {
-        /**
-         * Create a credentialStore instance
-         * 
-         * @param {string} accountId the id of the creadential account
-         * @param {boolean} encryptPasswords whether to encrypt passwords
-         */
-        constructor(accountId, encryptPasswords = true) {
-            if (typeof accountId !== 'string') {
-                throw new Error("Parameter 'accountId' must be typeof 'string'");
-            } else if (accountId.length === 0) {
-                throw new Error("Parameter 'accountId' must not be empty");
-            } else if (typeof encryptPasswords !== 'boolean') {
-                throw new Error("Parameter 'encryptPasswords' must be typeof'boolean'");
-            }
-
-            Object.defineProperty(this, 'accountId', {
-                value: accountId,
-                enumerable: true,
-                configurable: true,
-                writable: false
-            });
-
-            Object.defineProperty(this, 'encryptPasswords', {
-                value: encryptPasswords,
-                enumerable: true,
-                configurable: true,
-                writable: false
-            });
-        }
-
-        /**
-         * Write data to the password storage
-         *
-         * @param {string} user the user name to store
-         * @param {string} password the password to store
-         * @returns {Promise<boolean>} if the operation was successful
-         */
-        async write(user, password) {
-            return await passport_native.writeCredential(this.accountId, user, password, this.encryptPasswords);
-        }
-
-        /**
-         * Read data from the password storage
-         *
-         * @returns {Promise<credentialReadResult | null>} the username and password or null if unsuccessful
-         */
-        async read() {
-            return await passport_native.readCredential(this.accountId, this.encryptPasswords);
-        }
-
-        /**
-         * Remove a entry from the credential storage
-         *
-         * @returns {Promise<boolean>} if the operation was successful
-         */
-        async remove() {
-            return await passport_native.removeCredential(this.accountId);
-        }
-
-        /**
-         * Check if a password entry is encrypted. Throws an error on error
-         *
-         * @returns {Promise<boolean>} if the password is encrypted
-         */
-        async isEncrypted() {
-            return await passport_native.credentialEncrypted(this.accountId);
-        }
-    },
     CredentialStore: passport_native.CredentialStore,
     Credential: passport_native.Credential,
     passwords: passwords,

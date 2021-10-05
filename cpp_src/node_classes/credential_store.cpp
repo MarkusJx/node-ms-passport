@@ -67,9 +67,7 @@ Napi::Value credential_store::write(const Napi::CallbackInfo &info) {
     secure_wstring password(password_u16.begin(), password_u16.end());
 
     return napi_tools::promises::promise<void>(info.Env(), [user, password, acc = account_id, encrypt = encrypt_passwords] {
-        if (!credentials::write(acc, user, password, encrypt)) {
-            throw std::runtime_error("Could not store the credentials. Error: " + get_last_error_as_string());
-        }
+        credentials::write(acc, user, password, encrypt);
     });
 }
 
@@ -79,9 +77,7 @@ Napi::Value credential_store::read(const Napi::CallbackInfo& info) {
 
 Napi::Value credential_store::remove(const Napi::CallbackInfo& info) {
     return napi_tools::promises::promise<void>(info.Env(), [account_id = account_id] {
-        if (!credentials::remove(account_id)) {
-            throw std::runtime_error(get_last_error_as_string());
-        }
+        credentials::remove(account_id);
     });
 }
 

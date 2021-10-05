@@ -201,84 +201,6 @@ Napi::Boolean passportAccountExists(const Napi::CallbackInfo& info) {
 	CATCH_EXCEPTIONS
 }
 
-Napi::Promise writeCredential(const Napi::CallbackInfo& info) {
-	CHECK_ARGS(napi_tools::string, napi_tools::string, napi_tools::string, napi_tools::boolean);
-
-	std::u16string target_u16 = info[0].ToString();
-	std::u16string user_u16 = info[1].ToString();
-	std::u16string password_u16 = info[2].ToString();
-
-	std::wstring target(target_u16.begin(), target_u16.end());
-	std::wstring user(user_u16.begin(), user_u16.end());
-	secure_wstring password(password_u16.begin(), password_u16.end());
-	bool encrypt = info[3].ToBoolean();
-
-	return napi_tools::promises::promise<bool>(info.Env(), [target, user, password, encrypt] {
-		return credentials::write(target, user, password, encrypt);
-	});
-}
-
-class credentialReadResult {
-public:
-	std::wstring user;
-	secure_wstring password;
-	bool ok;
-
-	static Napi::Value toNapiValue(const Napi::Env& env, const credentialReadResult& res) {
-		if (res.ok) {
-			Napi::Object obj = Napi::Object::New(env);
-
-			std::u16string username(res.user.begin(), res.user.end());
-			std::u16string password(res.password.begin(), res.password.end());
-
-			obj.Set("username", Napi::String::New(env, username));
-			obj.Set("password", Napi::String::New(env, password));
-
-			return obj;
-		} else {
-			return env.Null();
-		}
-	}
-};
-
-Napi::Promise readCredential(const Napi::CallbackInfo& info) {
-	CHECK_ARGS(napi_tools::string, napi_tools::boolean);
-
-	Napi::Env env = info.Env();
-	std::u16string target_utf16 = info[0].As<Napi::String>().Utf16Value();
-	std::wstring target(target_utf16.begin(), target_utf16.end());
-	bool encrypted = info[1].ToBoolean();
-
-	return napi_tools::promises::promise<credentialReadResult>(info.Env(), [target, encrypted] {
-		credentialReadResult res;
-		res.ok = credentials::read(target, res.user, res.password, encrypted);
-
-		return res;
-	});
-}
-
-Napi::Promise removeCredential(const Napi::CallbackInfo& info) {
-	CHECK_ARGS(napi_tools::string);
-
-	std::u16string target_u16 = info[0].ToString();
-	std::wstring target(target_u16.begin(), target_u16.end());
-
-	return napi_tools::promises::promise<bool>(info.Env(), [target] {
-		return credentials::remove(target);
-	});
-}
-
-Napi::Promise credentialEncrypted(const Napi::CallbackInfo& info) {
-	CHECK_ARGS(napi_tools::string);
-
-	std::u16string target_u16 = info[0].ToString();
-	std::wstring target(target_u16.begin(), target_u16.end());
-
-	return napi_tools::promises::promise<bool>(info.Env(), [target] {
-		return credentials::isEncrypted(target);
-	});
-}
-
 Napi::Promise encryptPasswordHex(const Napi::CallbackInfo& info) {
 	CHECK_ARGS(napi_tools::string);
 
@@ -287,9 +209,9 @@ Napi::Promise encryptPasswordHex(const Napi::CallbackInfo& info) {
 
 	return napi_tools::promises::promise<std::string>(info.Env(), [data] {
 		secure_wstring data_cpy(data);
-		bool ok = passwords::encrypt(data_cpy);
-		if (!ok) throw exception("Could not encrypt the data");
-		else return binary_to_string(data_cpy.getBytes());
+		passwords::encrypt(data_cpy);
+
+		return binary_to_string(data_cpy.getBytes());
 	});
 }
 
@@ -301,9 +223,9 @@ Napi::Promise encryptPassword(const Napi::CallbackInfo& info) {
 
 	return napi_tools::promises::promise<node_secure_vector<byte>>(info.Env(), [data] {
 		secure_wstring data_cpy(data);
-		bool ok = passwords::encrypt(data_cpy);
-		if (!ok) throw exception("Could not encrypt the data");
-		else return node_secure_vector<byte>(std::move(data_cpy.getBytes()));
+		passwords::encrypt(data_cpy);
+
+		return node_secure_vector<byte>(std::move(data_cpy.getBytes()));
 	});
 }
 
@@ -315,10 +237,9 @@ Napi::Promise decryptPasswordHex(const Napi::CallbackInfo& info) {
 
 	return napi_tools::promises::promise<std::u16string>(info.Env(), [data_str] {
 		secure_wstring data_cpy(string_to_binary(data_str));
-		bool ok = passwords::decrypt(data_cpy);
+		passwords::decrypt(data_cpy);
 
-		if (!ok) throw exception("Could not decrypt the data");
-		else return std::u16string(data_cpy.begin(), data_cpy.end());
+		return std::u16string(data_cpy.begin(), data_cpy.end());
 	});
 }
 
@@ -330,10 +251,9 @@ Napi::Promise decryptPassword(const Napi::CallbackInfo& info) {
 
 	return napi_tools::promises::promise<std::u16string>(info.Env(), [data_vec] {
 		secure_wstring data_cpy(secure_wstring(data_vec.data));
-		bool ok = passwords::decrypt(data_cpy);
+		passwords::decrypt(data_cpy);
 
-		if (!ok) throw exception("Could not decrypt the data");
-		else return std::u16string(data_cpy.begin(), data_cpy.end());
+		return std::u16string(data_cpy.begin(), data_cpy.end());
 	});
 }
 
@@ -406,11 +326,6 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
 	EXPORT_FUNCTION(exports, env, verifySignatureHex);
 	EXPORT_FUNCTION(exports, env, verifySignature);
 	EXPORT_FUNCTION(exports, env, passportAccountExists);
-
-	EXPORT_FUNCTION(exports, env, writeCredential);
-	EXPORT_FUNCTION(exports, env, readCredential);
-	EXPORT_FUNCTION(exports, env, removeCredential);
-	EXPORT_FUNCTION(exports, env, credentialEncrypted);
 
 	EXPORT_FUNCTION(exports, env, encryptPasswordHex);
 	EXPORT_FUNCTION(exports, env, encryptPassword);

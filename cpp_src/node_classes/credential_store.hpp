@@ -3,9 +3,21 @@
 
 #include <napi.h>
 
+/**
+ * A namespace for node classes
+ */
 namespace node_classes {
+    /**
+     * A class for managing the windows credential store
+     */
     class credential_store : public Napi::ObjectWrap<credential_store> {
     public:
+        /**
+         * Initialize the class for use with node.js
+         * 
+         * @param env the environment to work in
+         * @param exports the exports to write this class to
+         */
         static void init(Napi::Env env, Napi::Object &exports);
 
         explicit credential_store(const Napi::CallbackInfo &info);
