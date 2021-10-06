@@ -76,7 +76,7 @@ if (process.argv.length === 2) {
         case "--build":
             checkWindows();
 
-            const cmake = spawn('cmake-js', ['compile']);
+            const cmake = spawn('./node_modules/cmake-js/bin/cmake-js', ['compile']);
             cmake.stdout.pipe(process.stdout);
             cmake.stderr.pipe(process.stderr);
 
