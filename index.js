@@ -36,7 +36,7 @@ if (passport_native) {
 
 function loadNativeModule() {
     const p = path.join(__dirname, 'bin', 'passport.node');
-    if (fs.existsSync(p)) {
+    if (fs.existsSync(p) && process.platform === 'win32') {
         return require(p);
     } else {
         if (process.platform === 'win32') {

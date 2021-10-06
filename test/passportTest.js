@@ -1,5 +1,10 @@
 const assert = require("assert");
-const { Passport, passport_utils } = require('./index');
+const { Passport, passport_utils } = require('../index');
+
+if (process.platform !== 'win32') {
+    console.log("INFO: Skipping passport tests since running on unix");
+    return;
+}
 
 describe('Passport hex test', function() {
     let publicKey, challenge, signed;

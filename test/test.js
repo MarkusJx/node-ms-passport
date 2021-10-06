@@ -1,5 +1,10 @@
 const assert = require("assert");
-const { passwords, CredentialStore } = require('./index');
+const { passwords, CredentialStore } = require('../index');
+
+if (process.platform !== 'win32') {
+    console.log("INFO: Skipping passwords and CredentialStore tests since running on unix");
+    return;
+}
 
 describe('Credential manager test', function() {
     describe('with encryption', () => {
