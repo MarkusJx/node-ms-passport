@@ -9,8 +9,9 @@
         "install": "npm run-script build",
         "postinstall": "node install.js",
         "pretest": "npm run-script build",
-        "test": "mocha",
-        "clean": "node install.js --clean"
+        "test": "mocha test.js passportTest.js",
+        "clean": "node install.js --clean",
+        "test:ci": "mocha test.js"
     },
     "keywords": [
         "Electron",

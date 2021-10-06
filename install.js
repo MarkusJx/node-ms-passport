@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const {spawn} = require('child_process');
+const { execSync } = require('child_process');
 
 const BINARY_NAME = "passport.node";
 const CS_BINARY_NAME = "CSNodeMsPassport.dll";
@@ -76,14 +76,9 @@ if (process.argv.length === 2) {
         case "--build":
             checkWindows();
 
-            const cmake = spawn('./node_modules/cmake-js/bin/cmake-js.bat', ['compile']);
-            cmake.stdout.pipe(process.stdout);
-            cmake.stderr.pipe(process.stderr);
-
-            cmake.on('close', code => {
-                if (code !== 0) {
-                    process.exit(code);
-                }
+            execSync(`cmd /c ${path.join(__dirname, 'node_modules', '.bin', 'cmake-js')} compile`, {
+                cwd: __dirname,
+                stdio: 'inherit'
             });
 
             break;
