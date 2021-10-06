@@ -1,5 +1,6 @@
 const assert = require("assert");
-const { Passport, passport_utils } = require('../index');
+const { Passport } = require('../index');
+const crypto = require('crypto');
 
 if (process.platform !== 'win32') {
     console.log("INFO: Skipping passport tests since running on unix");
@@ -24,7 +25,7 @@ describe('Passport hex test', function() {
     });
 
     it('Generating challenge', function() {
-        challenge = passport_utils.generateRandomHex(25);
+        challenge = crypto.randomBytes(25).toString('hex');
         assert.strictEqual(challenge.length, 50);
     });
 
@@ -63,7 +64,7 @@ describe('Passport test', function() {
     });
 
     it('Generating challenge', function() {
-        challenge = passport_utils.generateRandom(25);
+        challenge = crypto.randomBytes(25);
         assert.strictEqual(challenge.length, 25);
     });
 

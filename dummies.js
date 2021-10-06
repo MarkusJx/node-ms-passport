@@ -20,16 +20,10 @@ const passwords = {
     isEncrypted: dummy
 }
 
-const passport_utils = {
-    generateRandomHex: dummy,
-    generateRandom: dummy
-}
-
 module.exports = {
     PassportError: dummy,
     CredentialStore: dummy,
     Credential: dummy,
     Passport: Passport,
-    passwords: passwords,
-    passport_utils: passport_utils
+    passwords: passwords
 }

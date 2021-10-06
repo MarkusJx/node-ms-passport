@@ -287,26 +287,6 @@ Napi::Boolean passwordEncrypted(const Napi::CallbackInfo& info) {
 	CATCH_EXCEPTIONS
 }
 
-Napi::String generateRandom(const Napi::CallbackInfo& info) {
-	CHECK_ARGS(napi_tools::number);
-
-	TRY
-		int numChars = info[0].As<Napi::Number>();
-
-		static std::random_device dev;
-		static std::mt19937 rng(dev());
-		static std::uniform_int_distribution<> dist(0, UCHAR_MAX);
-
-		secure_vector<byte> buffer;
-		buffer.reserve(numChars);
-		for (int i = 0; i < numChars; i++) {
-			buffer.push_back((unsigned char)dist(rng));
-		}
-
-		return Napi::String::New(info.Env(), binary_to_string(buffer));
-	CATCH_EXCEPTIONS
-}
-
 void setCSharpDllLocation(const Napi::CallbackInfo& info) {
 	CHECK_ARGS(napi_tools::string);
 
@@ -334,7 +314,6 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
 	EXPORT_FUNCTION(exports, env, passwordEncryptedHex);
 	EXPORT_FUNCTION(exports, env, passwordEncrypted);
 
-	EXPORT_FUNCTION(exports, env, generateRandom);
 	EXPORT_FUNCTION(exports, env, setCSharpDllLocation);
 
 	node_classes::credential_store::init(env, exports);

@@ -392,27 +392,6 @@ export namespace passwords {
 }
 
 /**
- * Utilities
- */
-export namespace passport_utils {
-    /**
-     * Generate random bytes
-     *
-     * @param length the length of the challenge in bytes
-     * @return the random bytes as hex string
-     */
-    function generateRandomHex(length: number): string;
-
-    /**
-     * Generate random bytes
-     *
-     * @param length the length of the challenge in bytes
-     * @return the random bytes in a buffer
-     */
-    function generateRandom(length: number): Buffer;
-}
-
-/**
  * Passport C++ library variables
  */
 export namespace passport_lib {

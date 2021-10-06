@@ -366,27 +366,11 @@ Check if password bytes in a ``Buffer`` are encrypted:
 const is_encrypted = await passwords.isEncrypted(encrypted);
 ```
 
-### Passport utils
-#### ``passport_utils.generateRandomHex(length: number): string``
-Generate random bytes and get them as a hex-encoded string:
-```js
-const {passport_utils} = require('node-ms-passport');
-
-const rnd = passport_utils.generateRandomHex(25);
-```
-
-#### ``passport_utils.generateRandom(length: number): Buffer``
-Generate random bytes and get them in a ``Buffer``:
-```js
-const {passport_utils} = require('node-ms-passport');
-
-const rnd = passport_utils.generateRandom(25);
-```
-
 ### Examples
 #### Passport
 ```ts
-import {Passport, passport_utils} from "node-ms-passport";
+import {Passport} from "node-ms-passport";
+import * as crypto from "crypto";
 
 // Check if this system supports ms passport
 if (!Passport.passportAvailable()) {
@@ -407,7 +391,7 @@ if (!pass.accountExists) {
 let pubkey: Buffer = await pass.getPublicKey();
 
 // Generate a challenge
-let challenge: Buffer = passport_utils.generateRandom(25);
+let challenge: Buffer = crypto.randomBytes(25);
 
 // Sign the challenge
 let signature: Buffer = await pass.passportSign(challenge);

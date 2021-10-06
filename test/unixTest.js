@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { passwords, CredentialStore, Credential, Passport, passport_utils, PassportError } = require('../index');
+const { passwords, CredentialStore, Credential, Passport, PassportError } = require('../index');
 
 if (process.platform === 'win32') {
     console.log("INFO: Skipping unix tests since running on windows");
@@ -66,16 +66,6 @@ describe('Dummy test', () => {
 
         it('Is encrypted', () => {
             assert.throws(() => passwords.isEncrypted(), error);
-        });
-    });
-
-    describe('Passport utils test', () => {
-        it('Generate random (hex)', () => {
-            assert.throws(() => passport_utils.generateRandomHex(), error);
-        });
-
-        it('Generate randum', () => {
-            assert.throws(() => passport_utils.generateRandom(), error);
         });
     });
 });

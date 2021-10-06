@@ -33,6 +33,14 @@ describe('Credential manager test', function() {
             await cred.remove();
             assert.ok(!await cred.exists());
         });
+
+        it('Invalid credential read', (done) => {
+            cred.read().then(() => {
+                done("Should have thrown");
+            }).catch(() => {
+                done();
+            });
+        });
     });
 
     describe('without encryption', function() {
@@ -60,6 +68,14 @@ describe('Credential manager test', function() {
         it('Credential delete', async() => {
             await cred.remove();
             assert.ok(!await cred.exists());
+        });
+
+        it('Invalid credential read', (done) => {
+            cred.read().then(() => {
+                done("Should have thrown");
+            }).catch(() => {
+                done();
+            });
         });
     });
 

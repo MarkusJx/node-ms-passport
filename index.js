@@ -375,30 +375,6 @@ const passwords = {
     }
 }
 
-/**
- * Utilities
- */
-const passport_utils = {
-    /**
-     * Generate random bytes
-     *
-     * @param {number} length the length of the challenge in bytes
-     * @return {string} the random bytes as hex string
-     */
-    generateRandomHex: function(length) {
-        return passport_native.generateRandom(length);
-    },
-    /**
-     * Generate random bytes
-     *
-     * @param {number} length the length of the challenge in bytes
-     * @return {Buffer} the random bytes as hex string
-     */
-    generateRandom: function(length) {
-        return Buffer.from(passport_utils.generateRandomHex(length), 'hex');
-    }
-}
-
 module.exports = {
     PassportError: passport_native ? PassportError : dummies.PassportError,
     errorCodes: errorCodes,
@@ -406,7 +382,6 @@ module.exports = {
     CredentialStore: passport_native ? passport_native.CredentialStore : dummies.CredentialStore,
     Credential: passport_native ? passport_native.Credential : dummies.Credential,
     passwords: passport_native ? passwords : dummies.passwords,
-    passport_utils: passport_native ? passport_utils : dummies.passport_utils,
     /**
      * Passport C++ library variables
      */
