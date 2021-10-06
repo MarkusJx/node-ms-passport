@@ -25,16 +25,6 @@
  */
 
 /**
- * A result from a credential read operation
- */
-export type credentialReadResult = {
-    // The user name
-    username: string;
-    // The password
-    password: string;
-};
-
-/**
  * The error codes that may be stored
  * by the PassportError class
  */

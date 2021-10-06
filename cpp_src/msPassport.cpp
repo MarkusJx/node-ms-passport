@@ -293,9 +293,9 @@ Napi::String generateRandom(const Napi::CallbackInfo& info) {
 	TRY
 		int numChars = info[0].As<Napi::Number>();
 
-		std::random_device dev;
-		std::mt19937 rng(dev());
-		std::uniform_int_distribution<> dist(0, UCHAR_MAX);
+		static std::random_device dev;
+		static std::mt19937 rng(dev());
+		static std::uniform_int_distribution<> dist(0, UCHAR_MAX);
 
 		secure_vector<byte> buffer;
 		buffer.reserve(numChars);

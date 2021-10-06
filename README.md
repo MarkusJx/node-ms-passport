@@ -166,7 +166,7 @@ To use it, simply define
 const {CredentialStore} = require('node-ms-passport');
 ```
 
-#### ``new credentialStore(accountId: string, encryptPasswords: boolean = true)``
+#### ``new CredentialStore(accountId: string, encryptPasswords: boolean = true)``
 Create a new ``CredentialStore`` instance. Takes an account id and a
 boolean which controls whether to encrypt the stored password.
 ```js
@@ -181,6 +181,7 @@ Check if the passwords will be encrypted
 
 #### ``write(user: string, password: string): Promise<void>``
 Store a username and password. Throws on error.
+If the credentials already exist, they will be overwritten.
 ```js
 let ok = await store.write("username", "pa$$word");
 ```
@@ -195,7 +196,9 @@ let cred = await store.read();
 
 #### ``remove(): Promise<void>`` 
 Remove a username and password from the credential vault.
-Throws on error.
+Throws on error. This will cause all subsequent interactions
+with the credential vault (``refreshData()`` and ``setEncrypted()``)
+from the ``Credential`` class to fail.
 ```js
 await store.remove();
 ```
@@ -209,24 +212,35 @@ let encrypted = store.isEncrypted();
 #### ``exists(): Promise<boolean>``
 Check if the account exists:
 ```js
-if (await store.isEncrypted()) {
+if (await store.exists()) {
     // Do something like
     let cred = await store.read();
 }
 ```
 
 #### Credential class
-Credentials are stored using the ``Credential class``.
+Credentials are stored using the ``Credential`` class.
 The password is stored in an encrypted form until
 ``loadPassword()`` is called.
 
+**Note**: Almost all password operations are synchronized,
+so calling a async operation and a sync operation, the
+synchroized operation will possibly wait on the async
+operation to finish so make sure to not call a operation which
+may take some time like ``loadPassword()`` and a synchronized
+operation like ``get password()`` at once since this may
+cause your application to freeze.
+
+*TL;DR*: Always await async operations before calling
+sync operations on these types of objects.
+
 ##### Get a ``Credential`` instance
-```js
+```ts
 // Create a new credential store instance
 const store = new CredentialStore("some/id", true);
 
 // Read the data. Throws if the data does not exist.
-const cred = await store.read();
+const cred: Credential = await store.read();
 ```
 
 ##### ``get accountId(): string``
@@ -287,6 +301,10 @@ Does not alter the form in which the password is stored in the memory (RAM).
 After this call, the password will not be loaded,
 you must call ``loadPassword`` to retrieve it.
 If the supplied value matches the current value, this is a no-op.
+
+**Note**: This does not change the ``encryptPasswords`` value
+in the ``CredentialStore`` class that was used to create this
+``Credential`` instance.
 
 ##### ``ioEncrypted(): Promise<boolean>``
 Check if the password is *actually* encrypted
@@ -363,17 +381,17 @@ const rnd = passport_utils.generateRandom(25);
 
 ### Examples
 #### Passport
-```js
-const {passport, passport_utils} = require('node-ms-passport');
+```ts
+import {Passport, passport_utils} from "node-ms-passport";
 
 // Check if this system supports ms passport
-if (!passport.passportAvailable()) {
+if (!Passport.passportAvailable()) {
     // MS Passport is not available
     return;
 }
 
 // Create a new passport instance
-const pass = new passport("SOME_ID");
+const pass = new Passport("SOME_ID");
 
 // If the account does not exist,
 // create it
@@ -382,16 +400,16 @@ if (!pass.accountExists) {
 }
 
 // Get the public key
-let pubkey = await pass.getPublicKey();
+let pubkey: Buffer = await pass.getPublicKey();
 
 // Generate a challenge
-let challenge = passport_utils.generateRandom(25);
+let challenge: Buffer = passport_utils.generateRandom(25);
 
 // Sign the challenge
-let signature = await pass.passportSign(challenge);
+let signature: Buffer = await pass.passportSign(challenge);
 
 // Check if the signature matches
-let signature_matches = await passport.verifySignature(
+let signature_matches = await Passport.verifySignature(
                                                 challenge,
                                                 signature,
                                                 pubkey);
@@ -406,57 +424,72 @@ await pass.deletePassportAccount();
 ```
 
 #### Credential vault
-```js
-const {credentialStore} = require('node-ms-passport');
+```ts
+import {CredentialStore, Credential} from "node-ms-passport";
 
-// Create a new credentialStore instance
+// Create a new CredentialStore instance
 // with encrypting password
-const store = new credentialStore("test/test", true);
+const store = new CedentialStore("test/test", true);
+
+// Check if the credentials are already stored
+if (await store.exists()) {
+    // Do something with that
+}
 
 // Create a new credentialStore instance
 // without encryping passwords
-const plain_store = new credentialStore("test/plain", false);
+const plain_store = new CredentialStore("test/plain", false);
 
-// Write the password
-let ok = await store.write("test", "pa$$word");
-of (!ok) {
-    // Could not store the password
-    return;
-}
+// Write the password. Throws on error.
+await store.write("test", "pa$$word");
 
 // Check if the stored password is encrypted
-let encrypted = await store.isEncrypted();
-if (!encrypted) {
-    // It should be encrypted...
+if (!await store.isEncrypted()) {
+    // It should be encrypted. This shouldn't happen.
+    // If it still does, please open a new issue.
     return;
 }
 
-// Read the password
-let res = await store.read();
-if (res === null) {
-    // The read operation failed
-    return;
-}
+// Read the password. Throws on error.
+let cred: Credential = await store.read();
 
-// Get the username and password
-let user = res.username;
-let pass = res.password;
+// Get the username
+let user: string = res.username;
 
-// Delete the credential
-ok = await store.remove();
-if (!ok) {
-    // Could not delete the credential
-    return;
-}
+// The password is not yet loaded,
+// call loadPassword() to load it
+await cred.loadPassword();
+
+// Get the password
+let pass: string = cred.password;
+
+// Do something with the data...
+
+// We are done with the password, unload it.
+// Note: As strings are copied, this can also
+// be called directly after the password has
+// been retrieved, it will not affect any
+// already retrieved passwords
+await cred.unloadPassword();
+
+// Maybe update the data...
+await cred.update("newUser", "newPass");
+
+// Maybe we don't want the credentials
+// to be encrypted anymore...
+await cred.setEncrypted(false);
+
+// Delete the credential.
+await store.remove();
 ```
 
 #### Password encryption
 Encrypting and decrypting a password:
-```js
-const {passwords} = require('node-ms-passport');
+```ts
+import {passwords} from "node-ms-passport";
 
 // Encrypt a password
-let data;
+let data: Buffer;
 try {
     data = await passwords.encrypt("TestPassword");
 } catch (e) {
@@ -464,7 +497,7 @@ try {
 }
 
 // Check if the data is encrypted
-let encrypted;
+let encrypted: boolean;
 try {
     encrypted = await passwords.isEncrypted(data);
 } catch (e) {
@@ -554,43 +587,33 @@ int main() {
 Since the c++ api has all the functionality of the node.js api, the credential manager is also available.
 ```c++
 #include <NodeMsPassport.hpp>
+#include <iostream>
 
 int main() {
     using namespace nodeMsPassport::credentials;
 
-    // Write a password and encrypt it
-    bool ok = write(L"test/test", L"testUser", L"testPassword", true);
-    if (!ok) {
-        return 1;
-    }
-
-    // Check if the password is encrypted
-    bool encrypted;
     try {
-        encrypted = isEncrypted(L"test/test");
-    } catch (NodeMsPassport::encryptionException &e) {
-        return 1; // Throws exception if not ok
-    }
+        // Write a password and encrypt it. Throws on error.
+        write(L"test/test", L"testUser", L"testPassword", true);
 
-    // Should return true
-    if (!encrypted) {
-        // Should never be called,
-        // if the encryption fails, write returns false.
-        return 2;
-    }
+        // Check if the password is encrypted
+        if (!isEncrypted(L"test/test")) {
+            // Should never be called,
+            // if the encryption fails, write returns false.
+            return 2;
+        }
 
-    // Read the password, it is encrypted, so decrypt it. If you don't know
-    // if the password is encrypted, use isEncrypted() to find out.
-    std::wstring user;
-    secure_wstring password;
-    ok = read(L"test/test", user, password, true);
-    if (!ok) {
-        return 1;
-    }
+        // Read the password, it is encrypted, so decrypt it.
+        // If you don't know if the password is encrypted,
+        // use isEncrypted() to find out.
+        std::wstring user;
+        secure_wstring password;
+        read(L"test/test", user, password, true);
 
-    // Remove the password from the database
-    ok = remove(L"test/test");
-    if (!ok) {
+        // Remove the password from the database
+        remove(L"test/test");
+    } catch (const std::exception &e) {
+        std::cerr << "An error occurred: " << e.what() << std::endl;
         return 1;
     }
 
@@ -605,36 +628,28 @@ and [CredUnprotectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/
 
 ```c++
 #include <NodeMsPassport.hpp>
+#include <iostream>
 
 int main() {
     using namespace nodeMsPassport::passwords;
     
     secure_wstring password = L"Password";
 
-    // Encrypt the data
-    bool ok = encrypt(password);
-    if (!ok) {
-        return 1;
-    }
-
-    // Check if the data is encrypted
-    bool encrypted;
     try {
-        encrypted = isEncrypted(password);
+        // Encrypt the data
+        encrypt(password);
+
+        // Check if the data is encrypted
+        if (!isEncrypted(password)) {
+            // Should never be called, if the encryption fails,
+            // encrypt returns false.
+            return 2;
+        }
+
+        // Decrypt the data
+        decrypt(password);
     } catch (const std::exception &e) {
-        return 1; // Throws exception if not ok
-    }
-
-    // The result is stored in res.res
-    if (!encrypted) {
-        // Should never be called, if the encryption fails,
-        // encrypt returns false.
-        return 2;
-    }
-
-    // Decrypt the data
-    ok = decrypt(password);
-    if (!ok) {
+        std::cerr << "An error occurred: " << e.what() << std::endl;
         return 1;
     }
 
