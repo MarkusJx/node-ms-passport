@@ -53,6 +53,16 @@ function checkWindows() {
     }
 }
 
+async function getPkgJsonDir() {
+    for (let p of module.paths) {
+        try {
+            let prospectivePkgJsonDir = path.dirname(p);
+            await fs.promises.access(p, fs.constants.F_OK);
+            return prospectivePkgJsonDir;
+        } catch (e) {}
+    }
+}
+
 if (process.argv.length === 2) {
     deleteIfExists(BUILD_DIR);
 } else if (process.argv.length === 3) {
@@ -76,7 +86,12 @@ if (process.argv.length === 2) {
         case "--build":
             checkWindows();
 
-            execSync(`cmd /c ${path.join(__dirname, 'node_modules', '.bin', 'cmake-js')} compile`, {
+            let dir = path.join(__dirname, 'node_modules', '.bin', 'cmake-js');
+            if (!fs.existsSync(dir)) {
+                dir = path.join(__dirname, '..', '.bin', 'cmake-js');
+            }
+
+            execSync(`cmd /c ${dir} compile`, {
                 cwd: __dirname,
                 stdio: 'inherit'
             });
