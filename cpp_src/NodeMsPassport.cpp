@@ -137,7 +137,7 @@ secure_wstring copyToWChar(char* ptr, int sizeInBytes, bool& ok) {
 }
 
 // Source: https://github.com/microsoft/Windows-classic-samples/blob/master/Samples/CredentialProvider/cpp/helpers.cpp#L456
-bool unprotectCredential(secure_wstring& toUnprotect) {
+void credentials::unprotectCredential(secure_wstring& toUnprotect) {
 	CRED_PROTECTION_TYPE protectionType;
 	secure_vector<wchar_t> toUnprotect_cpy(toUnprotect.begin(), toUnprotect.end());
 	if (CredIsProtectedW(toUnprotect_cpy.data(), &protectionType)) {
@@ -154,17 +154,17 @@ bool unprotectCredential(secure_wstring& toUnprotect) {
 					if (CredUnprotectW(false, toUnprotect_cpy.data(), (DWORD)toUnprotect_cpy.size(), outData.data(),
 						&unprotectedSize)) {
 						toUnprotect = secure_wstring(outData.begin(), outData.end());
-						return true;
+						return;
 					}
 				}
 			}
 		}
 	}
 
-	return false;
+	throw std::runtime_error("Could not decrypt the credentials. Error: " + get_last_error_as_string());
 }
 
-bool protectCredential(secure_wstring& toProtect) {
+void credentials::protectCredential(secure_wstring &toProtect) {
 	CRED_PROTECTION_TYPE protectionType;
 	secure_vector<wchar_t> toProtect_cpy(toProtect.begin(), toProtect.end());
 	if (CredIsProtectedW(toProtect_cpy.data(), &protectionType)) {
@@ -182,27 +182,29 @@ bool protectCredential(secure_wstring& toProtect) {
 					if (CredProtectW(false, toProtect_cpy.data(), (DWORD)toProtect_cpy.size(), outData.data(),
 						&protectedSize, nullptr)) {
 						toProtect = secure_wstring(outData.begin(), outData.end());
-						return true;
+						return;
 					}
 				}
 			}
 		}
 	}
 
-	return false;
+	throw std::runtime_error("Could not protect the credentials. Error: " + get_last_error_as_string());
 }
 
-bool
+void
 credentials::write(const std::wstring& target, const std::wstring& user, const secure_wstring& password,
 	bool encrypt) {
 	bool ok;
 	secure_wstring pass = password;
 	if (encrypt) {
-		if (!protectCredential(pass)) return false;
+        protectCredential(pass);
 	}
 
 	secure_vector<unsigned char> passData = copyToChar(pass, ok);
-	if (!ok) return false;
+    if (!ok) {
+        throw std::runtime_error("Could not copy the password data");
+    }
 
 	DWORD cbCreds = (DWORD)passData.size();
 
@@ -221,33 +223,44 @@ credentials::write(const std::wstring& target, const std::wstring& user, const s
 	std::wstring user_cpy = user;
 	cred.UserName = (wchar_t*)user_cpy.data();
 
-	return ::CredWriteW(&cred, 0);
+	if (!::CredWriteW(&cred, 0)) {
+        throw std::runtime_error("Could not write the credentials. Error: " + get_last_error_as_string());
+	}
 }
 
-bool credentials::read(const std::wstring& target, std::wstring& username, secure_wstring& password, bool encrypt) {
+void credentials::read(const std::wstring& target, std::wstring& username, secure_wstring& password, bool encrypt) {
 	PCREDENTIALW pcred;
 
-	bool ok = ::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred);
-	if (!ok) return false;
+	if (!::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred)) {
+        throw std::runtime_error("Could not read the credentials. Error: " + get_last_error_as_string());
+	}
 
+	bool ok;
 	secure_wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
-	if (ok) {
-		if (encrypt) {
-			ok = unprotectCredential(pass);
-		}
+    if (!ok) {
+        ::CredFree(pcred);
+        throw std::runtime_error("Could not copy the password data");
+    }
 
-		if (ok) {
-			username = std::wstring(pcred->UserName);
-			password = secure_wstring(pass.begin(), pass.end());
+	if (encrypt) {
+        try {
+			unprotectCredential(pass);
+		} catch (const std::exception& e) {
+            ::CredFree(pcred);
+            throw e;
 		}
 	}
 
+	username = std::wstring(pcred->UserName);
+	password = secure_wstring(pass.begin(), pass.end());
+
 	::CredFree(pcred);
-	return ok;
 }
 
-bool credentials::remove(const std::wstring& target) {
-	return ::CredDeleteW(target.c_str(), CRED_TYPE_GENERIC, 0);
+void credentials::remove(const std::wstring& target) {
+	if (!::CredDeleteW(target.c_str(), CRED_TYPE_GENERIC, 0)) {
+        throw std::runtime_error("Could not remove the credentials. Error: " + get_last_error_as_string());
+	}
 }
 
 bool credentials::isEncrypted(const std::wstring& target) {
@@ -275,26 +288,30 @@ bool credentials::isEncrypted(const std::wstring& target) {
 	}
 }
 
-bool passwords::encrypt(secure_wstring& data) {
-	secure_wstring copy = data;
-	bool ok = protectCredential(copy);
-	if (!ok) {
-		return false;
-	} else {
-		data = copy;
+bool credentials::exists(const std::wstring& target) {
+    PCREDENTIALW pcred;
+    if (::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred)) {
+        CredFree(pcred);
 		return true;
+    } else {
+		if (GetLastError() == ERROR_NOT_FOUND) {
+            return false;
+        } else {
+            throw std::runtime_error("Could not check if the account exists. Error: " + get_last_error_as_string());
+		}
 	}
 }
 
-bool passwords::decrypt(secure_wstring& data) {
+void passwords::encrypt(secure_wstring& data) {
 	secure_wstring copy = data;
-	bool ok = unprotectCredential(copy);
-	if (!ok) {
-		return false;
-	} else {
-		data = copy;
-		return true;
-	}
+	credentials::protectCredential(copy);
+	data = copy;
+}
+
+void passwords::decrypt(secure_wstring& data) {
+	secure_wstring copy = data;
+    credentials::unprotectCredential(copy);
+	data = copy;
 }
 
 bool passwords::isEncrypted(const secure_wstring& data) {
@@ -310,4 +327,27 @@ bool passwords::isEncrypted(const secure_wstring& data) {
 	} else {
 		throw std::runtime_error("Could not check if the password is encrypted");
 	}
+}
+
+std::string nodeMsPassport::get_last_error_as_string() {
+    //Get the error message ID, if any.
+    DWORD errorMessageID = ::GetLastError();
+    if (errorMessageID == 0) {
+        return std::string();//No error message has been recorded
+    }
+
+    LPSTR messageBuffer = nullptr;
+
+    //Ask Win32 to give us the string version of that message ID.
+    //The parameters we pass in, tell Win32 to create the buffer that holds the message for us (because we don't yet know how long the message string will be).
+    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS,
+            NULL, errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR) &messageBuffer, 0, NULL);
+
+    //Copy the error message into a std::string.
+    std::string message(messageBuffer, size);
+
+    //Free the Win32's string's buffer.
+    LocalFree(messageBuffer);
+
+    return message;
 }

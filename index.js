@@ -24,22 +24,31 @@
  * SOFTWARE.
  */
 
-// Check if this runs on windows and check if this is windows 10
-if (process.platform !== 'win32') {
-    throw new Error("OS is not supported. Only windows 10 is supported");
-} else {
-    const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
-        .split('[')[1].split(' ')[1].split('.')[0];
-    if (Number(version) !== 10) {
-        throw new Error("Windows version is not supported. Only windows 10 is supported");
-    }
-}
-
+const fs = require('fs');
 const path = require('path');
-const passport_native = require(path.join(__dirname, 'bin', 'passport.node'));
+const passport_native = loadNativeModule();
+const dummies = require('./dummies');
 
 // Set the location for the C# dll
-passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
+if (passport_native) {
+    passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
+}
+
+function loadNativeModule() {
+    const p = path.join(__dirname, 'bin', 'passport.node');
+    if (fs.existsSync(p) && process.platform === 'win32') {
+        return require(p);
+    } else {
+        if (process.platform === 'win32') {
+            const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
+                .split('[')[1].split(' ')[1].split('.')[0];
+            if (Number(version) >= 10) {
+                throw new Error("The platform is windows 10 but the native module could not be found");
+            }
+        }
+        return null;
+    }
+}
 
 /**
  * A passport error
@@ -103,7 +112,7 @@ const errorCodes = {
 /**
  * Microsoft passport for node js
  */
-class passport {
+class Passport {
     /**
      * Create a passport instance
      * 
@@ -316,7 +325,7 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<string>} the result as hex string or null if unsuccessful
      */
-    encryptHex: async function (data) {
+    encryptHex: async function(data) {
         return await passport_native.encryptPasswordHex(data);
     },
     /**
@@ -325,7 +334,7 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<Buffer>} the result in a buffer or null if unsuccessful
      */
-    encrypt: async function (data) {
+    encrypt: async function(data) {
         return await passport_native.encryptPassword(data);
     },
     /**
@@ -334,7 +343,7 @@ const passwords = {
      * @param {string} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decryptHex: async function (data) {
+    decryptHex: async function(data) {
         return await passport_native.decryptPasswordHex(data);
     },
     /**
@@ -343,7 +352,7 @@ const passwords = {
      * @param {Buffer} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decrypt: async function (data) {
+    decrypt: async function(data) {
         return await passport_native.decryptPassword(data);
     },
     /**
@@ -352,7 +361,7 @@ const passwords = {
      * @param {string} data the data as hex string
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncryptedHex: async function (data) {
+    isEncryptedHex: async function(data) {
         return await passport_native.passwordEncryptedHex(data);
     },
     /**
@@ -361,7 +370,7 @@ const passwords = {
      * @param {Buffer} data the data in a buffer
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncrypted: async function (data) {
+    isEncrypted: async function(data) {
         return await passport_native.passwordEncrypted(data);
     }
 }
@@ -376,7 +385,7 @@ const passport_utils = {
      * @param {number} length the length of the challenge in bytes
      * @return {string} the random bytes as hex string
      */
-    generateRandomHex: function (length) {
+    generateRandomHex: function(length) {
         return passport_native.generateRandom(length);
     },
     /**
@@ -385,94 +394,19 @@ const passport_utils = {
      * @param {number} length the length of the challenge in bytes
      * @return {Buffer} the random bytes as hex string
      */
-    generateRandom: function (length) {
+    generateRandom: function(length) {
         return Buffer.from(passport_utils.generateRandomHex(length), 'hex');
     }
 }
 
-/**
- * A result from a credential read operation
- * 
- * @typedef {{username: string,
- *  password: string}
- * } credentialReadResult
- */
-
 module.exports = {
-    PassportError: PassportError,
+    PassportError: passport_native ? PassportError : dummies.PassportError,
     errorCodes: errorCodes,
-    passport: passport,
-    credentialStore: class {
-        /**
-         * Create a credentialStore instance
-         * 
-         * @param {string} accountId the id of the creadential account
-         * @param {boolean} encryptPasswords whether to encrypt passwords
-         */
-        constructor(accountId, encryptPasswords = true) {
-            if (typeof accountId !== 'string') {
-                throw new Error("Parameter 'accountId' must be typeof 'string'");
-            } else if (accountId.length === 0) {
-                throw new Error("Parameter 'accountId' must not be empty");
-            } else if (typeof encryptPasswords !== 'boolean') {
-                throw new Error("Parameter 'encryptPasswords' must be typeof'boolean'");
-            }
-
-            Object.defineProperty(this, 'accountId', {
-                value: accountId,
-                enumerable: true,
-                configurable: true,
-                writable: false
-            });
-
-            Object.defineProperty(this, 'encryptPasswords', {
-                value: encryptPasswords,
-                enumerable: true,
-                configurable: true,
-                writable: false
-            });
-        }
-
-        /**
-         * Write data to the password storage
-         *
-         * @param {string} user the user name to store
-         * @param {string} password the password to store
-         * @returns {Promise<boolean>} if the operation was successful
-         */
-        async write(user, password) {
-            return await passport_native.writeCredential(this.accountId, user, password, this.encryptPasswords);
-        }
-
-        /**
-         * Read data from the password storage
-         *
-         * @returns {Promise<credentialReadResult | null>} the username and password or null if unsuccessful
-         */
-        async read() {
-            return await passport_native.readCredential(this.accountId, this.encryptPasswords);
-        }
-
-        /**
-         * Remove a entry from the credential storage
-         *
-         * @returns {Promise<boolean>} if the operation was successful
-         */
-        async remove() {
-            return await passport_native.removeCredential(this.accountId);
-        }
-
-        /**
-         * Check if a password entry is encrypted. Throws an error on error
-         *
-         * @returns {Promise<boolean>} if the password is encrypted
-         */
-        async isEncrypted() {
-            return await passport_native.credentialEncrypted(this.accountId);
-        }
-    },
-    passwords: passwords,
-    passport_utils: passport_utils,
+    Passport: passport_native ? Passport : dummies.Passport,
+    CredentialStore: passport_native ? passport_native.CredentialStore : dummies.CredentialStore,
+    Credential: passport_native ? passport_native.Credential : dummies.Credential,
+    passwords: passport_native ? passwords : dummies.passwords,
+    passport_utils: passport_native ? passport_utils : dummies.passport_utils,
     /**
      * Passport C++ library variables
      */

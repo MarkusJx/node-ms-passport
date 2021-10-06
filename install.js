@@ -1,5 +1,6 @@
 const path = require('path');
 const fs = require('fs');
+const { execSync } = require('child_process');
 
 const BINARY_NAME = "passport.node";
 const CS_BINARY_NAME = "CSNodeMsPassport.dll";
@@ -36,11 +37,28 @@ function deleteIfExists(p) {
     }
 }
 
+function checkWindows() {
+    if (process.platform !== 'win32') {
+        console.warn("The platform is not win32, not continuing with the build process");
+        console.warn("This will cause the module not to work in any way");
+        process.exit(0);
+    } else {
+        const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
+            .split('[')[1].split(' ')[1].split('.')[0];
+        if (Number(version) < 10) {
+            console.warn("The windows verion less than 10, not continuing with the build process");
+            console.warn("This will cause the module not to work in any way");
+            process.exit(0);
+        }
+    }
+}
+
 if (process.argv.length === 2) {
     deleteIfExists(BUILD_DIR);
 } else if (process.argv.length === 3) {
     switch (process.argv[2]) {
         case "--post_build":
+            checkWindows();
             deleteIfExists(OUT_DIR);
             deleteIfExists(LIB_DIR);
             fs.mkdirSync(OUT_DIR);
@@ -54,6 +72,15 @@ if (process.argv.length === 2) {
             deleteIfExists(OUT_DIR);
             deleteIfExists(LIB_DIR);
             deleteIfExists(BUILD_DIR);
+            break;
+        case "--build":
+            checkWindows();
+
+            execSync(`cmd /c ${path.join(__dirname, 'node_modules', '.bin', 'cmake-js')} compile`, {
+                cwd: __dirname,
+                stdio: 'inherit'
+            });
+
             break;
         default:
             throw new Error(`Unknown argument: ${process.argv[2]}`);

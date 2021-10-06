@@ -356,3 +356,4 @@ build/
 lib/
 .idea
 cmake-build*
+.DS_STORE
