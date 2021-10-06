@@ -5,6 +5,10 @@ Uses C# and C++ to store credentials and sign data. Typescript definitions are a
 
 **This addon is only intended to be used with client-only applications, e.g. electron.**
 
+**Another important note**: As of version ``1.2.0``, when installed and imported on a non-windows machine,
+that process will no longer throw errors. Instead, if any of the modules methods/constructors
+are called an ``Error`` will be thrown.
+
 ## Installation
 ```
 npm install node-ms-passport
