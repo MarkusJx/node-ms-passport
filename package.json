@@ -4,7 +4,7 @@
     "description": "Microsoft passport with windows hello and credential manager for node js",
     "repository": "https://github.com/MarkusJx/node-ms-passport",
     "scripts": {
-        "build": "cmake-js compile",
+        "build": "node install.js --build",
         "postbuild": "node install.js --post_build",
         "install": "npm run-script build",
         "postinstall": "node install.js",

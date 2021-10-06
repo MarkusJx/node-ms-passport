@@ -24,22 +24,31 @@
  * SOFTWARE.
  */
 
-// Check if this runs on windows and check if this is windows 10
-if (process.platform !== 'win32') {
-    throw new Error("OS is not supported. Only windows 10 is supported");
-} else {
-    const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
-        .split('[')[1].split(' ')[1].split('.')[0];
-    if (Number(version) !== 10) {
-        throw new Error("Windows version is not supported. Only windows 10 is supported");
-    }
-}
-
+const fs = require('fs');
 const path = require('path');
-const passport_native = require(path.join(__dirname, 'bin', 'passport.node'));
+const passport_native = loadNativeModule();
+const dummies = require('./dummies');
 
 // Set the location for the C# dll
-passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
+if (passport_native) {
+    passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
+}
+
+function loadNativeModule() {
+    const p = path.join(__dirname, 'bin', 'passport.node');
+    if (fs.existsSync(p)) {
+        return require(p);
+    } else {
+        if (process.platform === 'win32') {
+            const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
+                .split('[')[1].split(' ')[1].split('.')[0];
+            if (Number(version) >= 10) {
+                throw new Error("The platform is windows 10 but the native module could not be found");
+            }
+        }
+        return null;
+    }
+}
 
 /**
  * A passport error
@@ -391,13 +400,13 @@ const passport_utils = {
 }
 
 module.exports = {
-    PassportError: PassportError,
+    PassportError: passport_native ? PassportError : dummies.PassportError,
     errorCodes: errorCodes,
-    Passport: Passport,
-    CredentialStore: passport_native.CredentialStore,
-    Credential: passport_native.Credential,
-    passwords: passwords,
-    passport_utils: passport_utils,
+    Passport: passport_native ? Passport : dummies.Passport,
+    CredentialStore: passport_native ? passport_native.CredentialStore : dummies.CredentialStore,
+    Credential: passport_native ? passport_native.Credential : dummies.Credential,
+    passwords: passport_native ? passwords : dummies.passwords,
+    passport_utils: passport_native ? passport_utils : dummies.passport_utils,
     /**
      * Passport C++ library variables
      */
