@@ -4,6 +4,9 @@ project(passport LANGUAGES CXX CSharp)
 # Set the .NET Framework version
 set(DOTNET_FRAMEWORK_VERSION "v4.7.2")
 
+#add_compile_definitions(UNICODE)
+#add_compile_definitions(_UNICODE)
+
 # Include CMake utilities for CSharp, for WinForm and WPF application support.
 include(CSharpUtilities)
 
@@ -40,7 +43,8 @@ set_target_properties(CSNodeMsPassport PROPERTIES
 set(CMAKE_CXX_STANDARD 17)
 set(CPP_SRC "${CMAKE_SOURCE_DIR}/cpp_src")
 set(CS_WRAPPER_SRC ${CPP_SRC}/NodeMsPassport.cpp ${CPP_SRC}/NodeMsPassport.hpp
-		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp ${CPP_SRC}/util.hpp)
+		${CPP_SRC}/CLITools.hpp ${CPP_SRC}/CLITools.cpp ${CPP_SRC}/util.hpp
+		${CPP_SRC}/credential_reader.hpp ${CPP_SRC}/credential_reader.cpp)
 
 add_library(NodeMsPassport STATIC ${CS_WRAPPER_SRC})
 

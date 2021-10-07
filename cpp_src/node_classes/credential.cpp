@@ -10,8 +10,8 @@ class credential_creator {
 public:
     credential_creator() : encrypt(false), pass(nullptr) {}
 
-    credential_creator(std::wstring acc, bool encrypt) :
-        account(std::move(acc)), encrypt(encrypt), pass(std::make_shared<secure_wstring>()) {}
+    credential_creator(std::wstring acc, bool _encrypt) :
+        account(std::move(acc)), encrypt(_encrypt), pass(std::make_shared<secure_wstring>()) {}
 
     std::wstring account;
     std::wstring user;
@@ -21,11 +21,6 @@ public:
     static Napi::Value toNapiValue(const Napi::Env& env, const credential_creator& c) {
         Napi::Buffer<char16_t> pass = Napi::Buffer<char16_t>::New(env, (char16_t *) c.pass->data(), c.pass->size(),
             [p = c.pass] (const Napi::Env &, char16_t *) {});
-
-        Napi::String account = Napi::String::New(env, (char16_t *) c.account.c_str());
-        Napi::String user = Napi::String::New(env, (char16_t *) c.user.c_str());
-
-        Napi::Boolean encrypt = Napi::Boolean::New(env, c.encrypt);
 
         return credential::constructor->New({
             Napi::String::New(env, (char16_t *) c.account.c_str()),
@@ -59,13 +54,34 @@ void credential::init(Napi::Env env, Napi::Object &exports) {
     env.SetInstanceData<Napi::FunctionReference>(constructor);
 }
 
-Napi::Object credential::createInstance(Napi::Env env, const std::wstring &account_id, bool encrypt) {
+Napi::Value credential::createInstance(Napi::Env env, const std::wstring &account_id, bool encrypt) {
     return napi_tools::promises::promise<credential_creator>(env, [account_id, encrypt] {
         credential_creator res(account_id, encrypt);
 
-        credentials::read(account_id, res.user, *res.pass, false);
-        if (!encrypt) {
-            credentials::protectCredential(*res.pass);
+        auto data = credentials::read(account_id);
+        res.pass = std::make_shared<secure_wstring>(data.password);
+        res.user = data.username;
+        credentials::protectCredential(*res.pass);
+
+        return res;
+    });
+}
+
+Napi::Value credential::enumerate(Napi::Env env, const std::shared_ptr<std::wstring> &target) {
+    return napi_tools::promises::promise<std::vector<credential_creator>>(env, [target] {
+        std::vector<credentials::credential_read_result> data = credentials::enumerate(target);
+
+        std::vector<credential_creator> res;
+        res.reserve(data.size());
+        for (const auto &c : data) {
+            credential_creator creator(c.target, c.encrypted);
+            creator.user = c.username;
+            creator.pass = std::make_shared<secure_wstring>(c.password);
+            if (!c.encrypted && !creator.pass->empty()) {
+                credentials::protectCredential(*creator.pass);
+            }
+
+            res.push_back(creator);
         }
 
         return res;
@@ -113,7 +129,8 @@ Napi::Value credential::load_password(const Napi::CallbackInfo &info) {
     return napi_tools::promises::promise<void>(info.Env(), [this] {
         std::unique_lock lock(mtx);
         if (!password_loaded) {
-            credentials::unprotectCredential(password);
+            if (!password.empty())
+                credentials::unprotectCredential(password);
             password_loaded = true;
         }
     });
@@ -124,7 +141,8 @@ Napi::Value credential::unload_password(const Napi::CallbackInfo &info) {
         std::unique_lock lock(mtx);
         if (password_loaded) {
             try {
-                credentials::protectCredential(password);
+                if (!password.empty())
+                    credentials::protectCredential(password);
             } catch (const std::exception& e) {
                 password.clear();
                 throw e;
@@ -139,20 +157,21 @@ Napi::Value credential::refresh_data(const Napi::CallbackInfo &info) {
     return napi_tools::promises::promise<void>(info.Env(), [this] {
         std::unique_lock lock(mtx);
 
+        credentials::credential_read_result read;
         try {
-            credentials::read(account_id, username, password, false);
+            read = credentials::read(account_id);
+            username = read.username;
+            password = read.password;
         } catch (const std::exception& e) {
             password.clear();
             throw e;
         }
 
-        if (!encrypt) {
-            try {
-                credentials::protectCredential(password);
-            } catch (const std::exception &e) {
-                password.clear();
-                throw e;
-            }
+        try {
+            credentials::protectCredential(password);
+        } catch (const std::exception &e) {
+            password.clear();
+            throw e;
         }
 
         password_loaded = false;
@@ -198,15 +217,17 @@ Napi::Value credential::set_encrypted(const Napi::CallbackInfo &info) {
             return;
         }
 
+        credentials::credential_read_result read;
         try {
-            credentials::read(account_id, username, password, encrypt);
+            read = credentials::read(account_id);
+            username = read.username;
+            password = read.password;
         } catch (const std::exception &e) {
             password.clear();
             throw e;
         }
 
         credentials::write(account_id, username, password, e);
-
         encrypt = e;
 
         try {

@@ -222,6 +222,30 @@ if (await store.exists()) {
 }
 ```
 
+#### ``static enumerateAccounts(target?: string | null): Promise<Credential[]>``
+Get all password vault accounts. The target may be a name of a account to search
+for or end with an '*' to match all targets with
+a name same to the name given, so 'user*' will
+return all accounts starting with 'user'.
+If the argument is omitted or set to null,
+all accounts will be retrieved.
+
+On retrieval, all passwords will be checked if they are encrypted
+and if they are encoded in ``utf-8`` or ``utf-16``. Once that
+is done, the passwords are converted to ``utf-16`` and encrypted
+to keep them in the system's memory. On write, the passwords
+will be written as ``utf-16`` string to the password vault.
+
+```ts
+// Print all accounts
+let accounts: Credential[] = await CredentialVault.enumerateAccounts();
+accounts.forEach(e => console.log(e.accountId));
+
+// Print all accounts beginning with 'Windows'
+accounts = await CredentialVault.enumerateAccounts("Windows*");
+accounts.forEach(e => console.log(e.accountId));
+```
+
 #### Credential class
 Credentials are stored using the ``Credential`` class.
 The password is stored in an encrypted form until

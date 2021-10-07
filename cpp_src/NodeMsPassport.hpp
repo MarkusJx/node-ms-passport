@@ -1,6 +1,7 @@
 #ifndef PASSPORT_NODEMSPASSPORT_HPP
 #define PASSPORT_NODEMSPASSPORT_HPP
 
+#include <memory>
 #include "util.hpp"
 
 /**
@@ -116,6 +117,21 @@ namespace nodeMsPassport {
 	 * Credentials namespace
 	 */
 	namespace credentials {
+        /**
+		 * A credential read result
+		 */
+        class credential_read_result {
+        public:
+            credential_read_result();
+
+            credential_read_result(std::wstring target, std::wstring username, secure_wstring password, bool encrpyted);
+
+            std::wstring target;
+            std::wstring username;
+            secure_wstring password;
+            bool encrypted;
+        };
+
 		/**
 		 * Write data to the password storage
 		 *
@@ -135,7 +151,7 @@ namespace nodeMsPassport {
 		 * @param password the password
 		 * @param whether the password is encrypted
 		 */
-		void read(const std::wstring& target, std::wstring& user, secure_wstring& password, bool encrypt);
+        credential_read_result read(const std::wstring &target);
 
 		/**
 		 * Remove a entry from the credential storage
@@ -174,6 +190,14 @@ namespace nodeMsPassport {
 		 * @return true if the account exists
 		 */
 		bool exists(const std::wstring &target);
+
+		/**
+		 * Enumerate all accounts
+		 * 
+		 * @param target the target to search for. May be nullptr.
+		 * @return the retrieved accounts
+		 */
+		std::vector<credential_read_result> enumerate(const std::shared_ptr<std::wstring> &target);
 	}
 
 	/**

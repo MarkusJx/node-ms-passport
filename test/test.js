@@ -179,6 +179,34 @@ describe('Credential manager test', function() {
             assert.strictEqual(cred.password, "pass");
         });
     });
+
+    describe('Enumerate test', async() => {
+        const cred = new CredentialStore("test/testEnum");
+        await cred.write("test", "test");
+
+        it('Read all', async() => {
+            let read = await CredentialStore.enumerateAccounts();
+
+            assert.ok(read.length >= 1);
+            assert.notStrictEqual(read.find(e => e.accountId == "test/testEnum" && e.username == "test"), undefined);
+        });
+
+        it('Wildcard read', async() => {
+            let read = await CredentialStore.enumerateAccounts("test*");
+
+            assert.ok(read.length >= 1);
+            assert.notStrictEqual(read.find(e => e.accountId == "test/testEnum" && e.username == "test"), undefined);
+        });
+
+        it('Exact read', async() => {
+            let read = await CredentialStore.enumerateAccounts("test/testEnum");
+
+            assert.ok(read.length >= 1);
+            assert.notStrictEqual(read.find(e => e.accountId == "test/testEnum" && e.username == "test"), undefined);
+        });
+
+        await cred.remove();
+    });
 });
 
 describe('Password encryption (hex)', function() {

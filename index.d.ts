@@ -336,6 +336,20 @@ export class CredentialStore {
      * @return true if the password is actually encrypted
      */
     public isEncrypted(): Promise<boolean>;
+
+    /**
+     * Enumerate all password vault accounts.
+     * The target may be a name of a account to search
+     * for or end with an '*' to match all targets with
+     * a name same to the name given, so 'user*' will
+     * return all accounts starting with 'user'.
+     * If the argument is omitted or set to null,
+     * all accounts will be retrieved.
+     * 
+     * @param target the target to search for. Defaults to null.
+     * @returns the read credentials
+     */
+    public static enumerateAccounts(target?: string | null): Promise<Credential[]>;
 }
 
 /**

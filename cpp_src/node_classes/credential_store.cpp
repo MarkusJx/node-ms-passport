@@ -15,7 +15,8 @@ void credential_store::init(Napi::Env env, Napi::Object& exports) {
         InstanceMethod("exists", &exists, napi_enumerable),
         InstanceMethod("isEncrypted", &is_encrypted, napi_enumerable),
         InstanceAccessor("accountId", &get_account_id, nullptr, napi_enumerable),
-        InstanceAccessor("encryptPasswords", &get_encrypt_passwords, nullptr, napi_enumerable)
+        InstanceAccessor("encryptPasswords", &get_encrypt_passwords, nullptr, napi_enumerable),
+        StaticMethod("enumerateAccounts", &enumerate, napi_enumerable)
     });
 
     auto *constructor = new Napi::FunctionReference();
@@ -47,6 +48,20 @@ credential_store::credential_store(const Napi::CallbackInfo &info) : ObjectWrap(
         std::u16string id = info[0].ToString().Utf16Value();
         account_id = std::wstring(id.begin(), id.end());
     }
+}
+
+Napi::Value credential_store::enumerate(const Napi::CallbackInfo &info) {
+    std::shared_ptr<std::wstring> target = nullptr;
+    if (info.Length() >= 1) {
+        if (info[0].IsString()) {
+            std::u16string t = info[0].ToString().Utf16Value();
+            target = std::make_shared<std::wstring>(t.begin(), t.end());
+        } else if (!info[0].IsNull()) {
+            throw Napi::TypeError::New(info.Env(), "The target name must be either of type string or null");
+        }
+    }
+
+    return credential::enumerate(info.Env(), target);
 }
 
 Napi::Value credential_store::get_account_id(const Napi::CallbackInfo& info) {

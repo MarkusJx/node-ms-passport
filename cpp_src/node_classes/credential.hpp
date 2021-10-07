@@ -27,7 +27,17 @@ namespace node_classes {
          * @param encrypt whether to encrypt passwords
          * @return the created instance
          */
-        static Napi::Object createInstance(Napi::Env env, const std::wstring &account_id, bool encrypt);
+        static Napi::Value createInstance(Napi::Env env, const std::wstring &account_id, bool encrypt);
+
+        /**
+         * Enumerate all accounts.
+         * Returns a promise which resolves to an array of credentials.
+         * 
+         * @param env the environment to work in
+         * @param target the account to search for. May be nullptr.
+         * @return the promise
+         */
+        static Napi::Value enumerate(Napi::Env env, const std::shared_ptr<std::wstring> &target);
 
         /**
          * Create a new credential instance from node.js

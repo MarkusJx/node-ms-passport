@@ -10,6 +10,7 @@
 #pragma comment(lib, "comsuppw.lib")
 
 #include "NodeMsPassport.hpp"
+#include "credential_reader.hpp"
 #include "CLITools.hpp"
 
 using namespace System;
@@ -228,33 +229,24 @@ credentials::write(const std::wstring& target, const std::wstring& user, const s
 	}
 }
 
-void credentials::read(const std::wstring& target, std::wstring& username, secure_wstring& password, bool encrypt) {
-	PCREDENTIALW pcred;
-
-	if (!::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &pcred)) {
+credentials::credential_read_result credentials::read(const std::wstring &target) {
+	PCREDENTIALW credential = nullptr;
+	if (!::CredReadW(target.c_str(), CRED_TYPE_GENERIC, 0, &credential)) {
         throw std::runtime_error("Could not read the credentials. Error: " + get_last_error_as_string());
 	}
 
-	bool ok;
-	secure_wstring pass = copyToWChar((char*)pcred->CredentialBlob, pcred->CredentialBlobSize, ok);
-    if (!ok) {
-        ::CredFree(pcred);
-        throw std::runtime_error("Could not copy the password data");
-    }
+	using pcred_ptr = std::unique_ptr<std::remove_pointer_t<PCREDENTIALW>, decltype(&CredFree)>;
+	pcred_ptr pcred(credential, CredFree);
 
-	if (encrypt) {
-        try {
-			unprotectCredential(pass);
-		} catch (const std::exception& e) {
-            ::CredFree(pcred);
-            throw e;
-		}
-	}
+	std::wstring username;
+    if (pcred->UserName != nullptr)
+        username = std::wstring(pcred->UserName);
 
-	username = std::wstring(pcred->UserName);
-	password = secure_wstring(pass.begin(), pass.end());
+    bool encrypted;
+	using namespace credential_reader;
+    secure_wstring password = parse_credential(pcred->CredentialBlob, pcred->CredentialBlobSize, encrypted);
 
-	::CredFree(pcred);
+	return credential_read_result(target, username, password, encrypted);
 }
 
 void credentials::remove(const std::wstring& target) {
@@ -300,6 +292,57 @@ bool credentials::exists(const std::wstring& target) {
             throw std::runtime_error("Could not check if the account exists. Error: " + get_last_error_as_string());
 		}
 	}
+}
+
+class pcredentialw_ptr : public std::unique_ptr<PCREDENTIALW, decltype(&CredFree)> {
+public:
+    pcredentialw_ptr(PCREDENTIALW *ptr) : std::unique_ptr<PCREDENTIALW, decltype(&CredFree)>(ptr, CredFree) {}
+
+	PCREDENTIALW &operator[](size_t index) {
+        return this->get()[index];
+	}
+};
+
+credentials::credential_read_result::credential_read_result() : encrypted(false) {}
+
+credentials::credential_read_result::credential_read_result(std::wstring _target, std::wstring _username,
+	secure_wstring _password, bool _encrypted) : target(std::move(_target)),
+		username(std::move(_username)), password(std::move(_password)), encrypted(_encrypted) {}
+
+std::vector<credentials::credential_read_result> credentials::enumerate(const std::shared_ptr<std::wstring> &target) {
+    DWORD count = 0;
+    PCREDENTIALW *credentials = nullptr;
+    const wchar_t *filter = nullptr;
+	if (target.operator bool()) {
+        filter = target->c_str();
+	}
+
+	if (!CredEnumerateW(filter, 0, &count, &credentials)) {
+        throw std::runtime_error("Could not enumerate the credentials. Error: " + get_last_error_as_string());
+	}
+
+	pcredentialw_ptr cred(credentials);
+    
+	std::vector<credential_read_result> res;
+    res.reserve(count);
+
+	for (DWORD i = 0; i < count; ++i) {
+        std::wstring targetName;
+        if (cred[i]->TargetName != nullptr)
+			targetName = cred[i]->TargetName;
+
+        std::wstring username;
+        if (cred[i]->UserName != nullptr)
+            username = cred[i]->UserName;
+
+		using namespace credential_reader;
+        bool encrypted;
+        secure_wstring password = parse_credential(cred[i]->CredentialBlob, cred[i]->CredentialBlobSize, encrypted);
+
+        res.emplace_back(targetName, username, password, encrypted);
+	}
+
+	return res;
 }
 
 void passwords::encrypt(secure_wstring& data) {

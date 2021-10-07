@@ -29,6 +29,14 @@ namespace node_classes {
 
     private:
         /**
+         * Enumerate all stored passwords
+         * 
+         * @param info the callback info
+         * @return a promise which resolves to an array containing all passwords
+         */
+        static Napi::Value enumerate(const Napi::CallbackInfo &info);
+
+        /**
          * Get the account id
          *
          * @param info the callback info
