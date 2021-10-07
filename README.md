@@ -224,7 +224,7 @@ if (await store.exists()) {
 
 #### ``static enumerateAccounts(target?: string | null): Promise<Credential[]>``
 Get all password vault accounts. The target may be a name of a account to search
-for or end with an '*' to match all targets with
+for or end with an asterisk to match all targets with
 a name same to the name given, so 'user*' will
 return all accounts starting with 'user'.
 If the argument is omitted or set to null,
