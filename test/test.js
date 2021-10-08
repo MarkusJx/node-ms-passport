@@ -6,6 +6,10 @@ if (process.platform !== 'win32') {
     return;
 }
 
+it('Check if the module is available', () => {
+    assert.ok(!nodeMsPassportAvailable());
+});
+
 describe('Credential manager test', function() {
     describe('with encryption', () => {
         const cred = new CredentialStore("test/test", true);
