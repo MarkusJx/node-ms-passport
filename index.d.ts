@@ -416,3 +416,13 @@ export namespace passport_lib {
     // The library name
     const library: string;
 }
+
+/**
+ * Check if the module is available.
+ * If this returns false you must be running
+ * on an invalid type of system and ever
+ * call to any method will throw an error.
+ * 
+ * @returns true if the module is available and can be used
+ */
+export function nodeMsPassportAvailable(): boolean;

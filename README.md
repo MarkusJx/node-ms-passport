@@ -38,6 +38,29 @@ or with installed workloads:
 * Desktop development with C++
 
 ## Usage
+### Check if the module is available
+If you want to check if the module is available
+on your type of system, call ``nodeMsPassportAvailable(): boolean``.
+If this returns ``true`` every method from the module is available
+and can be used as described below. If this method returns ``false``,
+any call to any method will throw an ``Error`` because the native module
+could not be found as the current system type is not supported.
+
+Importing the module on an unsupported system will not throw an error,
+only calling methods will. But importing the module will throw an
+error if the native module could not be found and the type of system
+is actually supported.
+
+```ts
+import {nodeMsPassportAvailable} from "node-ms-passport";
+
+if (nodeMsPassportAvailable()) {
+    // The module is available and can be used
+} else {
+    // The module is not avalable and should not be called
+}
+```
+
 ### Passport
 
 To use it, simply define

@@ -36,9 +36,7 @@ if (passport_native) {
 
 function loadNativeModule() {
     const p = path.join(__dirname, 'bin', 'passport.node');
-    if (fs.existsSync(p) && process.platform === 'win32') {
-        return require(p);
-    } else {
+    function checkPlatform() {
         if (process.platform === 'win32') {
             const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
                 .split('[')[1].split(' ')[1].split('.')[0];
@@ -47,6 +45,16 @@ function loadNativeModule() {
             }
         }
         return null;
+    }
+    
+    if (fs.existsSync(p) && process.platform === 'win32') {
+        try {
+            return require(p);
+        } catch (e) {
+            return checkPlatform();
+        }
+    } else {
+        return checkPlatform();
     }
 }
 
@@ -375,6 +383,10 @@ const passwords = {
     }
 }
 
+function available() {
+    return !!passport_native;
+}
+
 module.exports = {
     PassportError: passport_native ? PassportError : dummies.PassportError,
     errorCodes: errorCodes,
@@ -382,6 +394,7 @@ module.exports = {
     CredentialStore: passport_native ? passport_native.CredentialStore : dummies.CredentialStore,
     Credential: passport_native ? passport_native.Credential : dummies.Credential,
     passwords: passport_native ? passwords : dummies.passwords,
+    nodeMsPassportAvailable: available,
     /**
      * Passport C++ library variables
      */
