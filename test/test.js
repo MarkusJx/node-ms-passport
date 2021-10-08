@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { passwords, CredentialStore } = require('../index');
+const { passwords, CredentialStore, nodeMsPassportAvailable } = require('../index');
 
 if (process.platform !== 'win32') {
     console.log("INFO: Skipping passwords and CredentialStore tests since running on unix");
@@ -7,7 +7,7 @@ if (process.platform !== 'win32') {
 }
 
 it('Check if the module is available', () => {
-    assert.ok(!nodeMsPassportAvailable());
+    assert.ok(nodeMsPassportAvailable());
 });
 
 describe('Credential manager test', function() {
