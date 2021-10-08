@@ -51,6 +51,30 @@ export enum errorCodes {
 }
 
 /**
+ * The available public key encodings
+ */
+export enum PublicKeyEncoding {
+    X509SubjectPublicKeyInfo= "X509SubjectPublicKeyInfo",
+    Pkcs1RsaPublicKey = "Pkcs1RsaPublicKey",
+    BCryptPublicKey = "BCryptPublicKey",
+    Capi1PublicKey = "Capi1PublicKey",
+    BCryptEccFullPublicKey = "BCryptEccFullPublicKey"
+}
+
+/**
+ * A passport verification result
+ */
+export enum VerificationResult {
+    Verified = 0,
+    DeviceNotPresent = 1,
+    NotConfiguredForUser = 2,
+    DisabledByPolicy = 3,
+    DeviceBusy = 4,
+    RetriesExhausted = 5,
+    Canceled = 6
+}
+
+/**
  * A passport error
  */
 export class PassportError extends Error {
@@ -116,16 +140,18 @@ export class Passport {
     /**
      * Get the public key
      *
+     * @param encoding the encoding the encode the key in
      * @return the public key as a hex string
      */
-    public getPublicKeyHex(): Promise<string>;
+    public getPublicKeyHex(encoding?: PublicKeyEncoding | string | null): Promise<string>;
 
     /**
      * Get the public key
      *
+     * @param encoding the encoding the encode the key in
      * @return the public key in a buffer
      */
-    public getPublicKey(): Promise<Buffer>;
+    public getPublicKey(encoding?: PublicKeyEncoding | string | null): Promise<Buffer>;
 
     /**
      * Get a SHA-256 hash of the public key
@@ -140,6 +166,14 @@ export class Passport {
      * @return the hashed public key in a buffer
      */
     public getPublicKeyHash(): Promise<Buffer>;
+
+    /**
+     * Request a passport verification
+     *
+     * @param message the message to display
+     * @returns the verification result
+     */
+    public static requestVerification(message: string): Promise<VerificationResult>;
 
     /**
      * Check if a passport account exists
@@ -221,14 +255,21 @@ export class Credential {
     public get password(): string | null;
 
     /**
+     * Check if this credential instance is valid.
+     * May only be false when this is the result
+     * of an enumerate operation, as the default
+     * read operation will throw if the credential
+     * could not be read.
+     */
+    public get valid(): boolean;
+
+    /**
      * Check if the password is stored in encrypted form
      */
     public get encrypted(): boolean;
 
     /**
      * Get the password as a uint16_t buffer
-     *
-     * @return the password in a buffer
      */
     public get passwordBuffer(): Buffer | null;
 

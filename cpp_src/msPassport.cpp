@@ -1,5 +1,4 @@
 #include <napi.h>
-#include <sstream>
 #include <random>
 #include <utility>
 #include <iostream>
@@ -7,7 +6,7 @@
 
 #include "node_classes/credential_store.hpp"
 #include "node_classes/credential.hpp"
-#include "NodeMsPassport.hpp"
+#include "util.hpp"
 
 using namespace nodeMsPassport;
 
@@ -39,7 +38,7 @@ public:
 
 	explicit node_secure_vector(secure_vector<T> &&dt) : data(std::move(dt)) {}
 
-	static Napi::Value toNapiValue(const Napi::Env &env, const node_secure_vector &c) {
+	PASSPORT_UNUSED static Napi::Value toNapiValue(const Napi::Env &env, const node_secure_vector &c) {
 		return Napi::Buffer<T>::Copy(env, c.data.data(), c.data.size());
 	}
 
@@ -48,7 +47,7 @@ public:
 
 secure_vector<byte> string_to_binary(const std::string& source) {
 	static unsigned int nibbles[] = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 0, 0, 0, 0, 0, 0, 0, 10, 11, 12, 13, 14, 15 };
-	secure_vector<byte> retval;
+	secure_vector<byte> res;
 	for (std::string::const_iterator it = source.begin(); it < source.end(); it += 2) {
 		unsigned char v;
 		if (isxdigit(*it))
@@ -61,15 +60,15 @@ secure_vector<byte> string_to_binary(const std::string& source) {
 		}
 		if (it + 1 < source.end() && isxdigit(*(it + 1)))
 			v += nibbles[toupper(*(it + 1)) - '0'];
-		retval.push_back(v);
+		res.push_back(v);
 	}
-	return retval;
+	return res;
 }
 
 std::string binary_to_string(const secure_vector<byte>& source) {
 	static char syms[] = "0123456789ABCDEF";
 	std::stringstream ss;
-	for (std::_Vector_const_iterator<std::_Vector_val<std::_Simple_types<char> > >::value_type it : source)
+	for (auto it : source)
 		ss << syms[(((unsigned)it >> (unsigned)4) & (unsigned)0xf)] << syms[(unsigned)it & (unsigned)0xf];
 
 	return ss.str();
@@ -128,24 +127,52 @@ Napi::Promise deletePassportAccount(const Napi::CallbackInfo& info) {
 	});
 }
 
-Napi::Promise getPublicKeyHex(const Napi::CallbackInfo& info) {
-	CHECK_ARGS(napi_tools::string);
+std::string get_pk_encoding(const Napi::CallbackInfo &info) {
+    std::string encoding;
+    if (info.Length() >= 2 && !info[1].IsNull()) {
+        if (info[1].IsString()) {
+            encoding = info[1].ToString();
+            if (encoding.empty()) {
+                throw Napi::TypeError::New(info.Env(), "If supplied, the second argument must not be empty");
+            }
+        } else {
+            throw Napi::TypeError::New(info.Env(), "If supplied, the second argument must be of type string");
+        }
+    }
 
-	std::string account = info[0].ToString();
-	return napi_tools::promises::promise<std::string>(info.Env(), [account] {
-		secure_vector<byte> res = passport::getPublicKey(account);
-		return binary_to_string(res);
-	});
+    return encoding;
+}
+
+secure_vector<byte> get_pk(const std::string &account, const std::string &encoding) {
+    secure_vector<byte> res;
+    if (encoding.empty()) {
+        res = passport::getPublicKey(account);
+    } else {
+        res = passport::getPublicKey(account, encoding);
+    }
+
+    return res;
 }
 
 Napi::Promise getPublicKey(const Napi::CallbackInfo& info) {
 	CHECK_ARGS(napi_tools::string);
 
 	std::string account = info[0].ToString();
-	return napi_tools::promises::promise<node_secure_vector<byte>>(info.Env(), [account] {
-		secure_vector<byte> res = passport::getPublicKey(account);
-		return node_secure_vector<byte>(std::move(res));
+    std::string encoding = get_pk_encoding(info);
+
+	return napi_tools::promises::promise<node_secure_vector<byte>>(info.Env(), [account, encoding] {
+		return node_secure_vector<byte>(get_pk(account, encoding));
 	});
+}
+
+Napi::Promise getPublicKeyHex(const Napi::CallbackInfo& info) {
+    CHECK_ARGS(napi_tools::string);
+
+    std::string account = info[0].ToString();
+    std::string encoding = get_pk_encoding(info);
+    return napi_tools::promises::promise<std::string>(info.Env(), [account, encoding] {
+        return binary_to_string(get_pk(account, encoding));
+    });
 }
 
 Napi::Promise getPublicKeyHashHex(const Napi::CallbackInfo& info) {
@@ -153,8 +180,7 @@ Napi::Promise getPublicKeyHashHex(const Napi::CallbackInfo& info) {
 
 	std::string account = info[0].ToString();
 	return napi_tools::promises::promise<std::string>(info.Env(), [account] {
-		secure_vector<byte> res = passport::getPublicKeyHash(account);
-		return binary_to_string(res);
+		return binary_to_string(passport::getPublicKeyHash(account));
 	});
 }
 
@@ -166,6 +192,15 @@ Napi::Promise getPublicKeyHash(const Napi::CallbackInfo& info) {
 		secure_vector<byte> res = passport::getPublicKeyHash(account);
 		return node_secure_vector<byte>(std::move(res));
 	});
+}
+
+Napi::Promise requestVerification(const Napi::CallbackInfo &info) {
+    CHECK_ARGS(napi_tools::string);
+    std::string message = info[0].ToString();
+
+    return napi_tools::promises::promise<int>(info.Env(), [message] {
+        return passport::requestVerification(message);
+    });
 }
 
 Napi::Promise verifySignatureHex(const Napi::CallbackInfo& info) {
@@ -232,7 +267,6 @@ Napi::Promise encryptPassword(const Napi::CallbackInfo& info) {
 Napi::Promise decryptPasswordHex(const Napi::CallbackInfo& info) {
 	CHECK_ARGS(napi_tools::string);
 
-	Napi::Env env = info.Env();
 	std::string data_str = info[0].ToString();
 
 	return napi_tools::promises::promise<std::u16string>(info.Env(), [data_str] {
@@ -246,7 +280,6 @@ Napi::Promise decryptPasswordHex(const Napi::CallbackInfo& info) {
 Napi::Promise decryptPassword(const Napi::CallbackInfo& info) {
 	CHECK_ARGS(napi_tools::buffer);
 
-	Napi::Env env = info.Env();
 	node_secure_vector<byte> data_vec(info[0]);
 
 	return napi_tools::promises::promise<std::u16string>(info.Env(), [data_vec] {
@@ -302,7 +335,10 @@ Napi::Object InitAll(Napi::Env env, Napi::Object exports) {
 	EXPORT_FUNCTION(exports, env, passportSign);
 	EXPORT_FUNCTION(exports, env, getPublicKeyHex);
 	EXPORT_FUNCTION(exports, env, getPublicKey);
+    EXPORT_FUNCTION(exports, env, getPublicKeyHash);
+    EXPORT_FUNCTION(exports, env, getPublicKeyHashHex);
 	EXPORT_FUNCTION(exports, env, deletePassportAccount);
+    EXPORT_FUNCTION(exports, env, requestVerification);
 	EXPORT_FUNCTION(exports, env, verifySignatureHex);
 	EXPORT_FUNCTION(exports, env, verifySignature);
 	EXPORT_FUNCTION(exports, env, passportAccountExists);

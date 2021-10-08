@@ -22,7 +22,7 @@ secure_wstring string_to_wstring(char* str, size_t length) {
     return ws;
 }
 
-secure_wstring unprotect_cred_u8(char *data, size_t length) {
+secure_wstring unprotect_cred_u8(char *data, size_t length, bool &valid) {
     CRED_PROTECTION_TYPE protectionType;
 
     DWORD sz = 0;
@@ -36,10 +36,11 @@ secure_wstring unprotect_cred_u8(char *data, size_t length) {
         }
     }
 
-    throw std::runtime_error("Could not decrypt the credentials");
+    valid = false;
+    return {};
 }
 
-secure_wstring unprotect_cred_u16(char* data, size_t length) {
+secure_wstring unprotect_cred_u16(char* data, size_t length, bool &valid) {
     CRED_PROTECTION_TYPE protectionType;
 
     length /= sizeof(wchar_t);
@@ -54,7 +55,8 @@ secure_wstring unprotect_cred_u16(char* data, size_t length) {
         }
     }
 
-    throw std::runtime_error("Could not decrypt the credentials");
+    valid = false;
+    return {};
 }
 
 // Source: https://stackoverflow.com/a/1031773
@@ -134,16 +136,17 @@ bool is_protected_u8(char* data) {
     return CredIsProtectedA(data, &protectionType) && protectionType != CredUnprotected;
 }
 
-secure_wstring credential_reader::parse_credential(unsigned char *_data, size_t length, bool &encrypted) {
+secure_wstring credential_reader::parse_credential(unsigned char *_data, size_t length, bool &encrypted, bool &valid) {
     if (length == 0 || _data == nullptr) return secure_wstring();
     auto *data = reinterpret_cast<char *>(_data);
+    valid = true;
 
     if (is_protected_u16(data)) {
         encrypted = true;
-        return unprotect_cred_u16(data, length);
+        return unprotect_cred_u16(data, length, valid);
     } else if (is_protected_u8(data)) {
         encrypted = true;
-        return unprotect_cred_u8(data, length);
+        return unprotect_cred_u8(data, length, valid);
     } else if (is_utf8(data, length)) {
         encrypted = false;
         return string_to_wstring(data, length);

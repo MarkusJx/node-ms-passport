@@ -95,6 +95,14 @@ secure_vector<byte> passport::getPublicKey(const std::string& accountId) {
 	}
 }
 
+secure_vector<byte> passport::getPublicKey(const std::string &accountId, const std::string &encoding) {
+    try {
+        return CLITools::callFunc<secure_vector<byte>>("GetEncodedPublicKey", accountId, encoding);
+    } catch (Exception^ e) {
+        throw convertException(e);
+    }
+}
+
 secure_vector<byte> passport::getPublicKeyHash(const std::string& accountId) {
 	try {
 		return CLITools::callFunc<secure_vector<byte>>("GetPublicKeyHash", accountId);
@@ -117,6 +125,14 @@ void passport::deletePassportAccount(const std::string& accountId) {
 		CLITools::callFunc<void>("DeletePassportAccount", accountId);
 	} catch (Exception^ e) {
 		throw convertException(e);
+	}
+}
+
+int passport::requestVerification(const std::string& message) {
+    try {
+        return CLITools::callFunc<int>("RequestVerification", message);
+	} catch (Exception^ e) {
+        throw convertException(e);
 	}
 }
 
@@ -242,11 +258,15 @@ credentials::credential_read_result credentials::read(const std::wstring &target
     if (pcred->UserName != nullptr)
         username = std::wstring(pcred->UserName);
 
-    bool encrypted;
+    bool encrypted, valid;
 	using namespace credential_reader;
-    secure_wstring password = parse_credential(pcred->CredentialBlob, pcred->CredentialBlobSize, encrypted);
+    secure_wstring password = parse_credential(pcred->CredentialBlob, pcred->CredentialBlobSize, encrypted, valid);
 
-	return credential_read_result(target, username, password, encrypted);
+	// This is a single read operation, the password better be valid
+	if (!valid)
+        throw std::runtime_error("Could not decrypt the password. Error: " + get_last_error_as_string());
+
+	return credential_read_result(target, username, password, encrypted, true);
 }
 
 void credentials::remove(const std::wstring& target) {
@@ -294,6 +314,9 @@ bool credentials::exists(const std::wstring& target) {
 	}
 }
 
+/**
+ * A PCREDENTIALW smart pointer
+ */
 class pcredentialw_ptr : public std::unique_ptr<PCREDENTIALW, decltype(&CredFree)> {
 public:
     pcredentialw_ptr(PCREDENTIALW *ptr) : std::unique_ptr<PCREDENTIALW, decltype(&CredFree)>(ptr, CredFree) {}
@@ -303,21 +326,26 @@ public:
 	}
 };
 
-credentials::credential_read_result::credential_read_result() : encrypted(false) {}
+credentials::credential_read_result::credential_read_result() : encrypted(false), valid(false) {}
 
 credentials::credential_read_result::credential_read_result(std::wstring _target, std::wstring _username,
-	secure_wstring _password, bool _encrypted) : target(std::move(_target)),
-		username(std::move(_username)), password(std::move(_password)), encrypted(_encrypted) {}
+	secure_wstring _password, bool _encrypted, bool _valid) : target(std::move(_target)),
+		username(std::move(_username)), password(std::move(_password)), encrypted(_encrypted), valid(_valid) {}
 
 std::vector<credentials::credential_read_result> credentials::enumerate(const std::shared_ptr<std::wstring> &target) {
     DWORD count = 0;
     PCREDENTIALW *credentials = nullptr;
     const wchar_t *filter = nullptr;
-	if (target.operator bool()) {
+	if (target) {
         filter = target->c_str();
 	}
 
 	if (!CredEnumerateW(filter, 0, &count, &credentials)) {
+		if (GetLastError() == ERROR_NOT_FOUND) {
+			// There was nothing found, return an empty list
+            return std::vector<credential_read_result>();
+		}
+
         throw std::runtime_error("Could not enumerate the credentials. Error: " + get_last_error_as_string());
 	}
 
@@ -328,18 +356,21 @@ std::vector<credentials::credential_read_result> credentials::enumerate(const st
 
 	for (DWORD i = 0; i < count; ++i) {
         std::wstring targetName;
+
+		// Only set the target name if it is not null
         if (cred[i]->TargetName != nullptr)
 			targetName = cred[i]->TargetName;
 
         std::wstring username;
+		// Only set the user name if it is not null
         if (cred[i]->UserName != nullptr)
             username = cred[i]->UserName;
 
+		bool encrypted, valid;
 		using namespace credential_reader;
-        bool encrypted;
-        secure_wstring password = parse_credential(cred[i]->CredentialBlob, cred[i]->CredentialBlobSize, encrypted);
+        secure_wstring password = parse_credential(cred[i]->CredentialBlob, cred[i]->CredentialBlobSize, encrypted, valid);
 
-        res.emplace_back(targetName, username, password, encrypted);
+        res.emplace_back(targetName, username, password, encrypted, valid);
 	}
 
 	return res;

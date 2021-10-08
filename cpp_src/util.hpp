@@ -6,8 +6,10 @@
 
 #if __cplusplus >= 201603L || (defined(_MSVC_LANG) && _MSVC_LANG >= 201603L)
 #   define NODEMSPASSPORT_NODISCARD [[nodiscard]]
+#   define PASSPORT_UNUSED [[maybe_unused]]
 #else
 #   define NODEMSPASSPORT_NODISCARD
+#   define PASSPORT_UNUSED
 #endif
 
 #undef max

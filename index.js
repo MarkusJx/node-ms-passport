@@ -36,9 +36,10 @@ if (passport_native) {
 
 function loadNativeModule() {
     const p = path.join(__dirname, 'bin', 'passport.node');
+
     function checkPlatform() {
         if (process.platform === 'win32') {
-            const version = require('child_process').execSync('ver', { encoding: 'utf-8' }).toString().trim()
+            const version = require('child_process').execSync('ver', {encoding: 'utf-8'}).toString().trim()
                 .split('[')[1].split(' ')[1].split('.')[0];
             if (Number(version) >= 10) {
                 throw new Error("The platform is windows 10 but the native module could not be found");
@@ -46,7 +47,7 @@ function loadNativeModule() {
         }
         return null;
     }
-    
+
     if (fs.existsSync(p) && process.platform === 'win32') {
         try {
             return require(p);
@@ -64,7 +65,7 @@ function loadNativeModule() {
 class PassportError extends Error {
     /**
      * Create a passport error
-     * 
+     *
      * @param {string} message the error message
      * @param {number} code the error code
      */
@@ -82,7 +83,7 @@ class PassportError extends Error {
 
     /**
      * Get the error code
-     * 
+     *
      * @returns {number} the error code
      */
     getCode() {
@@ -92,7 +93,7 @@ class PassportError extends Error {
 
 /**
  * Rethrow an error
- * 
+ *
  * @param {Error} e the error to rethrow
  */
 function rethrowError(e) {
@@ -117,13 +118,31 @@ const errorCodes = {
     ERR_ACCESS_DENIED: 8
 };
 
+const PublicKeyEncoding = {
+    X509SubjectPublicKeyInfo: "X509SubjectPublicKeyInfo",
+    Pkcs1RsaPublicKey: "Pkcs1RsaPublicKey",
+    BCryptPublicKey: "BCryptPublicKey",
+    Capi1PublicKey: "Capi1PublicKey",
+    BCryptEccFullPublicKey: "BCryptEccFullPublicKey"
+};
+
+const VerificationResult = {
+    Verified: 0,
+    DeviceNotPresent: 1,
+    NotConfiguredForUser: 2,
+    DisabledByPolicy: 3,
+    DeviceBusy: 4,
+    RetriesExhausted: 5,
+    Canceled: 6
+}
+
 /**
  * Microsoft passport for node js
  */
 class Passport {
     /**
      * Create a passport instance
-     * 
+     *
      * @param {string} accountId the id of the passport account
      */
     constructor(accountId) {
@@ -144,7 +163,7 @@ class Passport {
 
     /**
      * Create a microsoft passport key asynchronously
-     * 
+     *
      * @returns {Promise<void>}
      */
     async createPassportKey() {
@@ -190,7 +209,7 @@ class Passport {
 
     /**
      * Delete a passport account
-     * 
+     *
      * @returns {Promise<void>}
      */
     async deletePassportAccount() {
@@ -208,11 +227,11 @@ class Passport {
      *
      * @returns {Promise<string>} the public key as a hex string
      */
-    async getPublicKeyHex() {
+    async getPublicKeyHex(encoding = null) {
         if (!this.accountExists)
             throw new PassportError("The passport account does not exist", errorCodes.ERR_ACCOUNT_NOT_FOUND);
         try {
-            return await passport_native.getPublicKeyHex(this.accountId);
+            return await passport_native.getPublicKeyHex(this.accountId, encoding);
         } catch (e) {
             rethrowError(e);
         }
@@ -223,11 +242,11 @@ class Passport {
      *
      * @returns {Promise<Buffer>} the public key in a buffer
      */
-    async getPublicKey() {
+    async getPublicKey(encoding = null) {
         if (!this.accountExists)
             throw new PassportError("The passport account does not exist", errorCodes.ERR_ACCOUNT_NOT_FOUND);
         try {
-            return await passport_native.getPublicKey(this.accountId);
+            return await passport_native.getPublicKey(this.accountId, encoding);
         } catch (e) {
             rethrowError(e);
         }
@@ -263,9 +282,17 @@ class Passport {
         }
     }
 
+    static requestVerification(message) {
+        try {
+            return passport_native.requestVerification(message);
+        } catch (e) {
+            rethrowError(e);
+        }
+    }
+
     /**
      * Check if a passport account exists
-     * 
+     *
      * @param {string} accountId the id of the account to check
      * @returns {boolean} true, if the account with the given id exists
      */
@@ -333,16 +360,16 @@ const passwords = {
      * @param {string} data the data to encrypt
      * @returns {Promise<string>} the result as hex string or null if unsuccessful
      */
-    encryptHex: async function(data) {
+    encryptHex: async function (data) {
         return await passport_native.encryptPasswordHex(data);
     },
     /**
      * Encrypt a password using CredProtect. Throws on error
-     * 
+     *
      * @param {string} data the data to encrypt
      * @returns {Promise<Buffer>} the result in a buffer or null if unsuccessful
      */
-    encrypt: async function(data) {
+    encrypt: async function (data) {
         return await passport_native.encryptPassword(data);
     },
     /**
@@ -351,7 +378,7 @@ const passwords = {
      * @param {string} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decryptHex: async function(data) {
+    decryptHex: async function (data) {
         return await passport_native.decryptPasswordHex(data);
     },
     /**
@@ -360,7 +387,7 @@ const passwords = {
      * @param {Buffer} data the data to decrypt as hex string
      * @returns {Promise<string>} the result as string or null if unsuccessful
      */
-    decrypt: async function(data) {
+    decrypt: async function (data) {
         return await passport_native.decryptPassword(data);
     },
     /**
@@ -369,7 +396,7 @@ const passwords = {
      * @param {string} data the data as hex string
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncryptedHex: async function(data) {
+    isEncryptedHex: async function (data) {
         return await passport_native.passwordEncryptedHex(data);
     },
     /**
@@ -378,7 +405,7 @@ const passwords = {
      * @param {Buffer} data the data in a buffer
      * @returns {Promise<boolean>} if the password is encrypted
      */
-    isEncrypted: async function(data) {
+    isEncrypted: async function (data) {
         return await passport_native.passwordEncrypted(data);
     }
 }
@@ -390,6 +417,8 @@ function available() {
 module.exports = {
     PassportError: passport_native ? PassportError : dummies.PassportError,
     errorCodes: errorCodes,
+    PublicKeyEncoding: PublicKeyEncoding,
+    VerificationResult: VerificationResult,
     Passport: passport_native ? Passport : dummies.Passport,
     CredentialStore: passport_native ? passport_native.CredentialStore : dummies.CredentialStore,
     Credential: passport_native ? passport_native.Credential : dummies.Credential,

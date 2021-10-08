@@ -100,6 +100,31 @@ Verify a signature:
 const matches = await Passport.verifySignature(CHALLENGE, SIGNATURE, PUBLICKEY);
 ```
 
+#### ``static requestVerification(message: string): Promise<VerificationResult>``
+Request the user to verify themselves.
+Returns a ``VerificationResult``, which is defined as
+```ts
+enum VerificationResult {
+    Verified = 0,
+    DeviceNotPresent = 1,
+    NotConfiguredForUser = 2,
+    DisabledByPolicy = 3,
+    DeviceBusy = 4,
+    RetriesExhausted = 5,
+    Canceled = 6
+}
+```
+Additionally, a message to be shown to the user must be passed.
+
+```js
+const result = await Passport.requestVerification("Verify your identity");
+if (result == VerificationResult.Verified) {
+    // Successfully verified
+} else {
+    // Verification failed
+}
+```
+
 #### ``new passport(accountId: string)``
 Create a new instance of the passport class
 ```js
@@ -128,13 +153,29 @@ Returns the signature bytes in a ``Buffer``.
 const signature = await pass.passportSign(Buffer.from("SOME_CHALLENGE"));
 ```
 
-#### ``getPublicKeyHex(): Promise<string>``
-Get the account's public key as a hex string:
+#### ``getPublicKeyHex(encoding?: PublicKeyEncoding | string | null): Promise<string>``
+Get the account's public key as a hex string.
+If you want to get the public key in a specific
+encoding, you can pass a ``PublicKeyEncoding``
+as the ``encoding`` parameter. Pass ``null`` or
+nothing to get the public key in the default encoding.
+``PublicKeyEncoding`` is defined as:
+```ts
+enum PublicKeyEncoding {
+    X509SubjectPublicKeyInfo= "X509SubjectPublicKeyInfo",
+    Pkcs1RsaPublicKey = "Pkcs1RsaPublicKey",
+    BCryptPublicKey = "BCryptPublicKey",
+    Capi1PublicKey = "Capi1PublicKey",
+    BCryptEccFullPublicKey = "BCryptEccFullPublicKey"
+}
+```
+
+Get the public key:
 ```js
 const pubkey = await pass.getPublicKeyHex();
 ```
 
-#### ``getPublicKey(): Promise<Buffer>``
+#### ``getPublicKey(encoding?: PublicKeyEncoding | string | null): Promise<Buffer>``
 Get the account's public key bytes in a ``Buffer``:
 ```js
 const pubkey = await pass.getPublicKey();
@@ -312,6 +353,16 @@ Does not represent if the password is *actually* stored in an encrypted form.
 ##### ``get passwordBuffer(): Buffer | null``
 Get the password in a ``char16_t`` buffer.
 Returns ``null`` if the password is not loaded.
+
+##### ``get valid(): boolean``
+Check if this credential instance is valid. If it is, it will work as expected,
+but if it isn't, any password read-related operations will throw
+(``update``, ``refreshData`` and ``isEncrypted`` will work though).
+This can only be false if this ``Credential`` instance is a result
+of ``CredentialStore.enumerateAccounts()`` as ``CredentialStore.read()``
+will throw an error if the credential could not be read. The credential
+counts as invalid if the data is protected (``CredIsProtected`` returned true)
+but could not be decrypted using ``CredUnprotect``.
 
 ##### ``loadPassword(): Promise<void>``
 Load the password to retrieve it later on.

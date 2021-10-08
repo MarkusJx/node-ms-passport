@@ -9,13 +9,13 @@ using namespace nodeMsPassport;
 
 void credential_store::init(Napi::Env env, Napi::Object& exports) {
     Napi::Function func = DefineClass(env, "CredentialStore", {
-        InstanceMethod("write", &write, napi_enumerable),
-        InstanceMethod("read", &read, napi_enumerable),
-        InstanceMethod("remove", &remove, napi_enumerable),
-        InstanceMethod("exists", &exists, napi_enumerable),
-        InstanceMethod("isEncrypted", &is_encrypted, napi_enumerable),
-        InstanceAccessor("accountId", &get_account_id, nullptr, napi_enumerable),
-        InstanceAccessor("encryptPasswords", &get_encrypt_passwords, nullptr, napi_enumerable),
+        InstanceMethod("write", &credential_store::write, napi_enumerable),
+        InstanceMethod("read", &credential_store::read, napi_enumerable),
+        InstanceMethod("remove", &credential_store::remove, napi_enumerable),
+        InstanceMethod("exists", &credential_store::exists, napi_enumerable),
+        InstanceMethod("isEncrypted", &credential_store::is_encrypted, napi_enumerable),
+        InstanceAccessor("accountId", &credential_store::get_account_id, nullptr, napi_enumerable),
+        InstanceAccessor("encryptPasswords", &credential_store::get_encrypt_passwords, nullptr, napi_enumerable),
         StaticMethod("enumerateAccounts", &enumerate, napi_enumerable)
     });
 

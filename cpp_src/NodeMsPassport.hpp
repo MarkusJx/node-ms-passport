@@ -87,6 +87,15 @@ namespace nodeMsPassport {
 		secure_vector<byte> getPublicKey(const std::string& accountId);
 
 		/**
+		 * Get the public key in a specific encoding
+		 * 
+		 * @param accountId the id of the account
+		 * @param encoding the encoding the encode the key in
+		 * @return the result of the operation
+		 */
+		secure_vector<byte> getPublicKey(const std::string &accountId, const std::string &encoding);
+
+		/**
 		 * Get a SHA-256 hash of the public key
 		 *
 		 * @param accountId the id of the account
@@ -111,6 +120,14 @@ namespace nodeMsPassport {
 		 * @param accountId the id of the account to delete
 		 */
 		void deletePassportAccount(const std::string& accountId);
+
+		/**
+		 * Request windows hello verification
+		 * 
+		 * @param message the message to display
+		 * @return the return code
+		 */
+		int requestVerification(const std::string& message);
 	}
 
 	/**
@@ -124,12 +141,13 @@ namespace nodeMsPassport {
         public:
             credential_read_result();
 
-            credential_read_result(std::wstring target, std::wstring username, secure_wstring password, bool encrpyted);
+            credential_read_result(std::wstring target, std::wstring username, secure_wstring password, bool encrpyted, bool valid);
 
             std::wstring target;
             std::wstring username;
             secure_wstring password;
             bool encrypted;
+            bool valid;
         };
 
 		/**

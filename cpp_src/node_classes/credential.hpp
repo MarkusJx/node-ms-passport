@@ -83,6 +83,14 @@ namespace node_classes {
         Napi::Value get_encrypt(const Napi::CallbackInfo &info);
 
         /**
+         * Check if the password could be decrypted
+         *
+         * @param info the callback info
+         * @return true if the credential is valid
+         */
+        Napi::Value get_valid(const Napi::CallbackInfo &info);
+
+        /**
          * Load the password.
          * Just decrypts the password and makes is available for reading.
          *
@@ -151,6 +159,8 @@ namespace node_classes {
         bool encrypt;
         /// Whether the password is decrypted
         bool password_loaded;
+        /// Whether the password could be decrypted
+        bool valid;
         /// A mutex for synchronizing password operations
         std::mutex mtx;
     };

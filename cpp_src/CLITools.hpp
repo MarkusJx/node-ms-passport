@@ -153,18 +153,21 @@ namespace CLITools {
 	 */
 	template<class T, class...Args>
 	inline T callFunc(String^ name, Args...args) {
-		static_assert(std::is_same_v<bool, T> || std::is_same_v<secure_vector<byte>, T> || std::is_same_v<void, T>);
-		if constexpr (std::is_same_v<bool, T>) {
-			Boolean ret = callPassportFunction<Boolean>(name, convertArgs(args...));
-			return convertBoolean(ret);
+		static_assert(std::is_same_v<bool, T> || std::is_same_v<secure_vector<byte>, T> || std::is_same_v<void, T> ||
+                      std::is_same_v<int, T>);
+        if constexpr (std::is_same_v<bool, T>) {
+            Boolean ret = callPassportFunction<Boolean>(name, convertArgs(std::forward<Args>(args)...));
+            return convertBoolean(ret);
+        } else if constexpr (std::is_same_v<int, T>) {
+            return callPassportFunction<int>(name, convertArgs(std::forward<Args>(args)...));
 		} else if constexpr (std::is_same_v<secure_vector<byte>, T>) {
-			array<byte>^ ret = callPassportFunction<array<byte>^>(name, convertArgs(args...));
+            array<byte> ^ ret = callPassportFunction<array<byte> ^>(name, convertArgs(std::forward<Args>(args)...));
 			secure_vector<byte> out = byteArrayToVector(ret);
 			clearArray(ret);
 
 			return out;
 		} else if constexpr (std::is_same_v<void, T>) {
-			callVoidPassportFunction(name, convertArgs(args...));
+            callVoidPassportFunction(name, convertArgs(std::forward<Args>(args)...));
 		}
 	}
 }

@@ -184,32 +184,51 @@ describe('Credential manager test', function() {
         });
     });
 
-    describe('Enumerate test', async() => {
-        const cred = new CredentialStore("test/testEnum");
-        await cred.write("test", "test");
+    describe('Enumerate test', function () {
+        let cred;
+        it('Setup', async() => {
+            cred = new CredentialStore("test/testEnum");
+            await cred.write("test", "test");
+        });
 
         it('Read all', async() => {
             let read = await CredentialStore.enumerateAccounts();
 
             assert.ok(read.length >= 1);
-            assert.notStrictEqual(read.find(e => e.accountId == "test/testEnum" && e.username == "test"), undefined);
+            assert.notStrictEqual(
+                read.find(e => e.accountId === "test/testEnum" && e.username === "test" && e.valid),
+                undefined
+            );
         });
 
         it('Wildcard read', async() => {
             let read = await CredentialStore.enumerateAccounts("test*");
 
             assert.ok(read.length >= 1);
-            assert.notStrictEqual(read.find(e => e.accountId == "test/testEnum" && e.username == "test"), undefined);
+            assert.notStrictEqual(
+                read.find(e => e.accountId === "test/testEnum" && e.username === "test" && e.valid),
+                undefined
+            );
         });
 
         it('Exact read', async() => {
             let read = await CredentialStore.enumerateAccounts("test/testEnum");
 
             assert.ok(read.length >= 1);
-            assert.notStrictEqual(read.find(e => e.accountId == "test/testEnum" && e.username == "test"), undefined);
+            assert.notStrictEqual(
+                read.find(e => e.accountId === "test/testEnum" && e.username === "test" && e.valid),
+                undefined
+            );
         });
 
-        await cred.remove();
+        it('Empty read', async() => {
+            let read = await CredentialStore.enumerateAccounts("does not exist");
+            assert.strictEqual(read.length, 0);
+        });
+
+        it('Destroy', async() => {
+            await cred.remove();
+        });
     });
 });
 

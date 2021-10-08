@@ -3,6 +3,7 @@ using System;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Windows.Security.Credentials;
+using Windows.Security.Credentials.UI;
 using Windows.Security.Cryptography;
 using Windows.Security.Cryptography.Core;
 using Windows.Storage.Streams;
@@ -144,6 +145,65 @@ namespace CSNodeMsPassport {
                     // An unknown error occurred
                     throw new UnknownException();
             }
+        }
+
+        /// <summary>
+        /// Get the public key
+        /// </summary>
+        /// <param name="accountId">The id of the account to use</param>
+        /// <param name="encoding">The name of the encoding</param>
+        /// <exception cref="UserCancelledException"></exception>
+        /// <exception cref="AccountNotFoundException"></exception>
+        /// <exception cref="UnknownException"></exception>
+        /// <exception cref="AggregateException"></exception>
+        /// <exception cref="ArgumentNullException"></exception>
+        /// <exception cref="ArithmeticException"></exception>
+        /// <exception cref="OverflowException"></exception>
+        /// <returns>The public key in a buffer</returns>
+        public static byte[] GetEncodedPublicKey(string accountId, string encoding) {
+            // Try to get the account
+            Task<KeyCredentialRetrievalResult> task = Task.Run(async () => await KeyCredentialManager.OpenAsync(accountId));
+            KeyCredentialRetrievalResult retrievalResult = task.Result;
+
+            // Check the KeyCredentialRetrievalResult status
+            switch (retrievalResult.Status) {
+                case KeyCredentialStatus.Success:
+                    // Get the user's credential
+                    KeyCredential userCredential = retrievalResult.Credential;
+
+                    // Get the enum type
+                    var type = (CryptographicPublicKeyBlobType) Enum.Parse(typeof(CryptographicPublicKeyBlobType), encoding);
+
+                    // Get the public key
+                    IBuffer publicKey = userCredential.RetrievePublicKey(type);
+
+                    // Copy the public key to the PassportResult's buffer
+                    CryptographicBuffer.CopyToByteArray(publicKey, out byte[] buffer);
+
+                    // The operation was successful
+                    return buffer;
+                case KeyCredentialStatus.UserCanceled:
+                    // User cancelled the Passport enrollment process
+                    throw new UserCancelledException();
+                case KeyCredentialStatus.NotFound:
+                    // The account was not found
+                    throw new AccountNotFoundException();
+                default:
+                    // An unknown error occurred
+                    throw new UnknownException();
+            }
+        }
+
+        /// <summary>
+        /// Request user verification
+        /// </summary>
+        /// <param name="message">The message to display</param>
+        /// <returns>The verification result</returns>
+        public static int RequestVerification(string message) {
+            Task<UserConsentVerificationResult> task = Task.Run(async () => await UserConsentVerifier.RequestVerificationAsync(message));
+            UserConsentVerificationResult result = task.Result;
+
+            return (int) result;
         }
 
         /// <summary>
