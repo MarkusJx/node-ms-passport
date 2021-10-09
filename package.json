@@ -1,6 +1,6 @@
 {
     "name": "node-ms-passport",
-    "version": "1.2.4",
+    "version": "1.2.5",
     "description": "Microsoft passport with windows hello and credential manager for node js",
     "repository": "https://github.com/MarkusJx/node-ms-passport",
     "scripts": {

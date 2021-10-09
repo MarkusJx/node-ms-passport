@@ -41,7 +41,7 @@ credential_store::credential_store(const Napi::CallbackInfo &info) : ObjectWrap(
 
         encrypt_passwords = info[1].ToBoolean();
     } else {
-        encrypt_passwords = true;
+        encrypt_passwords = false;
     }
 
     {

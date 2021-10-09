@@ -28,7 +28,7 @@
  * The error codes that may be stored
  * by the PassportError class
  */
-export enum errorCodes {
+export enum PassportErrorCode {
     // An exception was thrown by the native
     // addon of which the error code is unknown
     ERR_ANY = -1,
@@ -58,6 +58,7 @@ export enum PublicKeyEncoding {
     Pkcs1RsaPublicKey = "Pkcs1RsaPublicKey",
     BCryptPublicKey = "BCryptPublicKey",
     Capi1PublicKey = "Capi1PublicKey",
+    // May not be supported
     BCryptEccFullPublicKey = "BCryptEccFullPublicKey"
 }
 
@@ -92,7 +93,7 @@ export class PassportError extends Error {
      * 
      * @returns the error code
      */
-    public getCode(): number;
+    public getCode(): PassportErrorCode | number;
 }
 
 /**
@@ -307,7 +308,11 @@ export class Credential {
      * Encrypts/Decrypts and stores the new
      * password value in the password vault.
      * If this value matches the current value,
-     * this is a no-op.
+     * this is a no-op. Passwords are not encrypted
+     * by default since the encryption key gets
+     * deleted once the user logs of, thus, the
+     * password cannot be retrieved anymore after that.
+     * Only use this if you know what you are doing.
      *
      * @param encrypt whether to encrypt the password
      */
@@ -327,10 +332,15 @@ export class Credential {
  */
 export class CredentialStore {
     /**
-     * Create a new credential store instance
+     * Create a new credential store instance.
+     * If encrypt is set to true, the password
+     * is protected using the session key,
+     * which gets deleted after the user logs
+     * off, making the password not readable anymore.
+     * Only set this to true if you know what you are doing.
      *
      * @param accountId the id of the account
-     * @param encrypt whether to encrypt the password. Defaults to true.
+     * @param encrypt whether to encrypt the password. Defaults to false.
      */
     public constructor(accountId: string, encrypt?: boolean);
 
@@ -394,7 +404,9 @@ export class CredentialStore {
 }
 
 /**
- * Password encryption using windows APIs
+ * Password encryption using windows APIs.
+ * The encryption keys get deleted once the
+ * user is logged out.
  */
 export namespace passwords {
     /**

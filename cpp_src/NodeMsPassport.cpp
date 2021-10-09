@@ -18,11 +18,11 @@ using namespace System::Reflection;
 using namespace nodeMsPassport;
 
 passport::passportException::passportException(std::string err, int code) : error(std::move(err)) {
-	error.append("#").append(std::to_string(code));
+	this->error.append("#").append(std::to_string(code));
 }
 
 const char* passport::passportException::what() const noexcept {
-	return error.c_str();
+	return this->error.c_str();
 }
 
 /**

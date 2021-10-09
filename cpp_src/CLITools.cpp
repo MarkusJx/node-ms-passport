@@ -35,6 +35,7 @@ std::string CLITools::wstring_to_string(const std::wstring& in) {
 	}
 
 	out.resize(outSize);
+    out.resize(strlen(out.c_str()));
 	return out;
 }
 

@@ -97,7 +97,7 @@ class PassportError extends Error {
  * @param {Error} e the error to rethrow
  */
 function rethrowError(e) {
-    const regex = /^\w+#\d{0,2}$/g;
+    const regex = /^.+#-?\d{1,2}$/g;
     if (regex.test(e.message)) {
         const parts = e.message.split('#');
         throw new PassportError(parts[0], Number(parts[1]));
@@ -106,7 +106,7 @@ function rethrowError(e) {
     }
 }
 
-const errorCodes = {
+const PassportErrorCode = {
     ERR_ANY: -1,
     ERR_UNKNOWN: 1,
     ERR_MISSING_PIN: 2,
@@ -416,7 +416,7 @@ function available() {
 
 module.exports = {
     PassportError: passport_native ? PassportError : dummies.PassportError,
-    errorCodes: errorCodes,
+    PassportErrorCode: PassportErrorCode,
     PublicKeyEncoding: PublicKeyEncoding,
     VerificationResult: VerificationResult,
     Passport: passport_native ? Passport : dummies.Passport,

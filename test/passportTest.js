@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { Passport, VerificationResult } = require('../index');
+const { Passport, VerificationResult, PublicKeyEncoding} = require('../index');
 const crypto = require('crypto');
 
 if (process.platform !== 'win32') {
@@ -95,6 +95,26 @@ describe('Passport test', function() {
     it('Verify signature', async function() {
         const signatureMatches = await Passport.verifySignature(challenge, signed, publicKey);
         assert(signatureMatches);
+    });
+
+    it('Get the public key encoded using BCryptPublicKey', async() => {
+        const key = await pass.getPublicKey(PublicKeyEncoding.BCryptPublicKey);
+        assert.ok(key.length > 0);
+    });
+
+    it('Get the public key encoded using Capi1PublicKey', async() => {
+        const key = await pass.getPublicKey(PublicKeyEncoding.Capi1PublicKey);
+        assert.ok(key.length > 0);
+    });
+
+    it('Get the public key encoded using X509SubjectPublicKeyInfo', async() => {
+        const key = await pass.getPublicKey(PublicKeyEncoding.X509SubjectPublicKeyInfo);
+        assert.ok(key.length > 0);
+    });
+
+    it('Get the public key encoded using Pkcs1RsaPublicKey', async() => {
+        const key = await pass.getPublicKey(PublicKeyEncoding.Pkcs1RsaPublicKey);
+        assert.ok(key.length > 0);
     });
 
     it('Delete passport key', async() => {

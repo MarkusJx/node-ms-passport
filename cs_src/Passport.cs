@@ -83,17 +83,20 @@ namespace CSNodeMsPassport {
                     KeyCredentialOperationResult opResult = opTask.Result;
 
                     // Check the KeyCredentialOperationResult status
-                    if (opResult.Status == KeyCredentialStatus.Success) {
-                        // Get the signature
-                        IBuffer signatureBuffer = opResult.Result;
+                    switch (opResult.Status) {
+                        case KeyCredentialStatus.Success:
+                            // Get the signature
+                            IBuffer signatureBuffer = opResult.Result;
 
-                        // Copy the signature to the PassportResult's buffer
-                        CryptographicBuffer.CopyToByteArray(signatureBuffer, out byte[] buffer);
-                        // The operation was successful
-                        return buffer;
-                    } else {
-                        // The sign operation failed
-                        throw new SignOperationFailedException();
+                            // Copy the signature to the PassportResult's buffer
+                            CryptographicBuffer.CopyToByteArray(signatureBuffer, out byte[] buffer);
+                            // The operation was successful
+                            return buffer;
+                        case KeyCredentialStatus.UserCanceled:
+                            throw new UserCancelledException();
+                        default:
+                            // The sign operation failed
+                            throw new SignOperationFailedException();
                     }
                 case KeyCredentialStatus.UserCanceled:
                     // User cancelled the Passport enrollment process

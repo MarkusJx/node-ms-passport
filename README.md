@@ -201,9 +201,9 @@ await pass.deletePassportAccount();
 
 #### Exceptions
 Almost every passport operation can throw an instance of ``PassportError``.
-Every instance of ``PassportError`` stores an error code, which is one of ``errorCodes``:
+Every instance of ``PassportError`` stores an error code, which is one of ``PassportErrorCode``:
 ```ts
-enum errorCodes {
+enum PassportErrorCode {
     // An exception was thrown by the native
     // addon of which the error code is unknown
     ERR_ANY = -1,
@@ -234,11 +234,16 @@ To use it, simply define
 const {CredentialStore} = require('node-ms-passport');
 ```
 
-#### ``new CredentialStore(accountId: string, encryptPasswords: boolean = true)``
+#### ``new CredentialStore(accountId: string, encryptPasswords: boolean = false)``
 Create a new ``CredentialStore`` instance. Takes an account id and a
 boolean which controls whether to encrypt the stored password.
+The second argument determines whether the password should be encrypted before
+storing it.
+**Note: The key to encrypt and decrypt the password is destroyed when the user
+logs off, thus the password can't be read after that, so only set this to
+true if you know what you are doing.**
 ```js
-const store = new CredentialStore("some/id", true);
+const store = new CredentialStore("some/id");
 ```
 
 #### ``get accountId(): string``
@@ -406,7 +411,9 @@ If the supplied value matches the current value, this is a no-op.
 
 **Note**: This does not change the ``encryptPasswords`` value
 in the ``CredentialStore`` class that was used to create this
-``Credential`` instance.
+``Credential`` instance. And again, the key to encrypt and
+decrypt the password is destroyed when the user logs off
+so only set this to true if you know what you are doing.
 
 ##### ``ioEncrypted(): Promise<boolean>``
 Check if the password is *actually* encrypted
@@ -419,7 +426,8 @@ let encrypted = await store.isEncrypted();
 ```
 
 ### Encrypt data
-
+**Note: The key to encrypt and decrypt the password is destroyed when the user logs off so the
+any data stored using this will be unreadable after that.**
 Encrypting data using [CredProtectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credprotectw)
 and [CredUnprotectW](https://docs.microsoft.com/en-us/windows/win32/api/wincred/nf-wincred-credunprotectw) is also
 supported.

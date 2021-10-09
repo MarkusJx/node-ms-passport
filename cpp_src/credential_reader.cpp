@@ -23,8 +23,6 @@ secure_wstring string_to_wstring(char* str, size_t length) {
 }
 
 secure_wstring unprotect_cred_u8(char *data, size_t length, bool &valid) {
-    CRED_PROTECTION_TYPE protectionType;
-
     DWORD sz = 0;
     if (!CredUnprotectA(false, data, (DWORD) length, nullptr, &sz)) {
         DWORD dwErr = GetLastError();
@@ -41,8 +39,6 @@ secure_wstring unprotect_cred_u8(char *data, size_t length, bool &valid) {
 }
 
 secure_wstring unprotect_cred_u16(char* data, size_t length, bool &valid) {
-    CRED_PROTECTION_TYPE protectionType;
-
     length /= sizeof(wchar_t);
     DWORD sz = 0;
     if (!CredUnprotectW(false, (wchar_t *) data, (DWORD) length, nullptr, &sz)) {
@@ -64,7 +60,7 @@ bool is_utf8(const char *string, size_t length) {
     if (!string)
         return false;
 
-    const unsigned char *bytes = (const unsigned char *) string;
+    const auto *bytes = reinterpret_cast<const unsigned char *>(string);
     while (bytes < (bytes + length)) {
         if ((       // ASCII
                     // use bytes[0] <= 0x7F to allow ASCII control characters
@@ -83,7 +79,7 @@ bool is_utf8(const char *string, size_t length) {
             continue;
         }
 
-        if ((// excluding overlongs
+        if ((// excluding over-longs
                     bytes[0] == 0xE0 &&
                     (0xA0 <= bytes[1] && bytes[1] <= 0xBF) &&
                     (0x80 <= bytes[2] && bytes[2] <= 0xBF)) ||
@@ -137,7 +133,9 @@ bool is_protected_u8(char* data) {
 }
 
 secure_wstring credential_reader::parse_credential(unsigned char *_data, size_t length, bool &encrypted, bool &valid) {
-    if (length == 0 || _data == nullptr) return secure_wstring();
+    if (length == 0 || _data == nullptr)
+        return {};
+
     auto *data = reinterpret_cast<char *>(_data);
     valid = true;
 
@@ -152,6 +150,6 @@ secure_wstring credential_reader::parse_credential(unsigned char *_data, size_t 
         return string_to_wstring(data, length);
     } else {
         encrypted = false;
-        return secure_wstring((wchar_t *) data, length / sizeof(wchar_t));
+        return {(wchar_t *) data, length / sizeof(wchar_t)};
     }
 }
