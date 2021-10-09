@@ -1,5 +1,5 @@
 const assert = require("assert");
-const { passwords, CredentialStore, Credential, Passport, PassportError, nodeMsPassportAvailable } = require('../index');
+const { passwords, CredentialStore, Credential, Passport, PassportError, PassportModule } = require('../index');
 
 if (process.platform === 'win32') {
     console.log("INFO: Skipping unix tests since running on windows");
@@ -9,7 +9,7 @@ if (process.platform === 'win32') {
 const error = new Error("Your current platform is not supported");
 
 it('Check if the module is available', () => {
-    assert.ok(!nodeMsPassportAvailable());
+    assert.ok(!PassportModule.available());
 });
 
 describe('Dummy test', () => {

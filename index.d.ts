@@ -471,11 +471,36 @@ export namespace passport_lib {
 }
 
 /**
- * Check if the module is available.
- * If this returns false you must be running
- * on an invalid type of system and ever
- * call to any method will throw an error.
- * 
- * @returns true if the module is available and can be used
+ * Module methods
  */
-export function nodeMsPassportAvailable(): boolean;
+export class PassportModule {
+    /**
+     * Check if the module is available.
+     * If this returns false you must be running
+     * on an invalid type of system and ever
+     * call to any method will throw an error.
+     *
+     * @returns true if the module is available and can be used
+     */
+    public static available(): boolean;
+
+    /**
+     * Set the C# module location.
+     * May be used to fix a bug when the
+     * module is packaged within an electron
+     * application using asar and the packaged
+     * app uses the module's version in the asar
+     * package instead of the unpacked version.
+     * Check the documentation for further information.
+     *
+     * @param location the location to set
+     * @constructor
+     */
+    public static set csModuleLocation(location: string);
+
+    /**
+     * Get the C# module location
+     * @constructor
+     */
+    public static get csModuleLocation(): string;
+}

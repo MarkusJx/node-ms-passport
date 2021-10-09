@@ -29,9 +29,11 @@ const path = require('path');
 const passport_native = loadNativeModule();
 const dummies = require('./dummies');
 
+let csModuleLocation = path.join(__dirname, 'bin/');
+
 // Set the location for the C# dll
 if (passport_native) {
-    passport_native.setCSharpDllLocation(path.join(__dirname, 'bin/'));
+    passport_native.setCSharpDllLocation(csModuleLocation);
 }
 
 function loadNativeModule() {
@@ -410,8 +412,27 @@ const passwords = {
     }
 }
 
-function available() {
-    return !!passport_native;
+class PassportModule {
+    static set csModuleLocation(location) {
+        if (PassportModule.available()) {
+            passport_native.setCSharpDllLocation(location);
+            csModuleLocation = location;
+        } else {
+            dummies.dummy();
+        }
+    }
+
+    static get csModuleLocation() {
+        if (PassportModule.available()) {
+            return csModuleLocation;
+        } else {
+            dummies.dummy();
+        }
+    }
+
+    static available() {
+        return !!passport_native;
+    }
 }
 
 module.exports = {
@@ -423,7 +444,7 @@ module.exports = {
     CredentialStore: passport_native ? passport_native.CredentialStore : dummies.CredentialStore,
     Credential: passport_native ? passport_native.Credential : dummies.Credential,
     passwords: passport_native ? passwords : dummies.passwords,
-    nodeMsPassportAvailable: available,
+    PassportModule: PassportModule,
     /**
      * Passport C++ library variables
      */

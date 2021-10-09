@@ -40,7 +40,7 @@ or with installed workloads:
 ## Usage
 ### Check if the module is available
 If you want to check if the module is available
-on your type of system, call ``nodeMsPassportAvailable(): boolean``.
+on your type of system, call ``PassportModule.available(): boolean``.
 If this returns ``true`` every method from the module is available
 and can be used as described below. If this method returns ``false``,
 any call to any method will throw an ``Error`` because the native module
@@ -52,17 +52,36 @@ error if the native module could not be found and the type of system
 is actually supported.
 
 ```ts
-import {nodeMsPassportAvailable} from "node-ms-passport";
+import {PassportModule} from "node-ms-passport";
 
-if (nodeMsPassportAvailable()) {
+if (PassportModule.available()) {
     // The module is available and can be used
 } else {
     // The module is not avalable and should not be called
 }
 ```
 
-### Passport
+### Electron ``asar`` packaging fix
+There is still a bug with ``electron-packager`` when the application
+gets packaged into an ``asar`` package: Although the module gets
+unpacked and stored next to the ``app.asar`` file in a directory
+called ``app.asar.unpacked``, the packaged app (for some reason)
+chooses to load the module from within the ``app.asar`` file,
+which causes any ``Passport`` operation to fail as the C# DLL
+cannot be loaded from within an archive (no DLL can be loaded
+from within an archive, that's why ``app.asar.unpacked`` exists).
+To fix this, ``PassportModule.set csModuleLocation`` was created.
+You may want to use it like this:
+```ts
+const {PassportModule} = require('node-ms-passport');
 
+PassportModule.csModuleLocation = PassportModule.csModuleLocation.replace(
+    'app.asar',
+    'app.asar.unpacked'
+);
+```
+
+### Passport
 To use it, simply define
 ```js
 const {Passport} = require('node-ms-passport');

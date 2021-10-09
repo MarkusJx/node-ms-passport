@@ -25,5 +25,6 @@ module.exports = {
     CredentialStore: dummy,
     Credential: dummy,
     Passport: Passport,
-    passwords: passwords
+    passwords: passwords,
+    dummy: dummy
 }
