@@ -12,6 +12,10 @@ it('Check if the module is available', () => {
     assert.ok(!PassportModule.available());
 });
 
+it('Run electron asar fix', () => {
+    PassportModule.electronAsarFix();
+});
+
 describe('Dummy test', () => {
     it('PassportError creation', () => {
         assert.throws(() => new PassportError(), error);

@@ -433,6 +433,15 @@ class PassportModule {
     static available() {
         return !!passport_native;
     }
+
+    static electronAsarFix() {
+        if (!PassportModule.available()) return;
+        const regex = /[\/\\]app\.asar[\/\\]/g;
+        if (regex.test(PassportModule.csModuleLocation)) {
+            PassportModule.csModuleLocation = PassportModule.csModuleLocation
+                .replace(regex, `${path.sep}app.asar.unpacked${path.sep}`);
+        }
+    }
 }
 
 module.exports = {

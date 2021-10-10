@@ -503,4 +503,16 @@ export class PassportModule {
      * @constructor
      */
     public static get csModuleLocation(): string;
+
+    /**
+     * Fix a bug which happens when the module is
+     * packaged within an electron application
+     * using asar and unpacked into an 'app.asar.unpacked'
+     * folder: Although the module is correctly unpacked,
+     * the runtime may still choose to execute the packaged
+     * module instead of the unpacked module which will
+     * cause any passport operation to fail as the
+     * C# dll this depends on can not be found.
+     */
+    public static electronAsarFix(): void;
 }

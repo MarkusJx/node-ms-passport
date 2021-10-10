@@ -70,15 +70,23 @@ chooses to load the module from within the ``app.asar`` file,
 which causes any ``Passport`` operation to fail as the C# DLL
 cannot be loaded from within an archive (no DLL can be loaded
 from within an archive, that's why ``app.asar.unpacked`` exists).
-To fix this, ``PassportModule.set csModuleLocation`` was created.
-You may want to use it like this:
-```ts
+To fix this, ``PassportModule.electronAsarFix()`` was created,
+which is basically an alias for:
+```js
 const {PassportModule} = require('node-ms-passport');
 
-PassportModule.csModuleLocation = PassportModule.csModuleLocation.replace(
-    'app.asar',
-    'app.asar.unpacked'
-);
+if (PassportModule.available() &&
+    PassportModule.csModuleLocation.includes("\\app.asar\\")) {
+    PassportModule.csModuleLocation = PassportModule.csModuleLocation
+        .replace("\\app.asar\\", "\\app.asar.unpacked\\");
+}
+```
+
+Use it like this:
+```js
+const {PassportModule} = require('node-ms-passport');
+
+PassportModule.electronAsarFix();
 ```
 
 ### Passport
