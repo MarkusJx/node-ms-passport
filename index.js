@@ -36,16 +36,27 @@ if (passport_native) {
     passport_native.setCSharpDllLocation(csModuleLocation);
 }
 
+function isWindows10() {
+    try {
+        const version = require('child_process')
+            .execSync('ver', {encoding: 'utf-8'})
+            .toString()
+            .trim()
+            .split('[')[1]
+            .split(' ')[1]
+            .split('.')[0];
+        return Number(version) >= 10;
+    } catch (_) {
+        return false;
+    }
+}
+
 function loadNativeModule() {
     const p = path.join(__dirname, 'bin', 'passport.node');
 
     function checkPlatform() {
-        if (process.platform === 'win32') {
-            const version = require('child_process').execSync('ver', {encoding: 'utf-8'}).toString().trim()
-                .split('[')[1].split(' ')[1].split('.')[0];
-            if (Number(version) >= 10) {
-                throw new Error("The platform is windows 10 but the native module could not be found");
-            }
+        if (process.platform === 'win32' && isWindows10()) {
+            throw new Error("The platform is windows 10 but the native module could not be found");
         }
         return null;
     }
@@ -312,6 +323,8 @@ class Passport {
      * @returns {boolean} true if passport is available
      */
     static passportAvailable() {
+        if (!isWindows10()) return false;
+
         try {
             return passport_native.passportAvailable();
         } catch (e) {
