@@ -30,7 +30,7 @@
     "main": "index.js",
     "dependencies": {
         "@markusjx/n-api-tools": "^1.1.1",
-        "cmake-js": "^6.2.1",
+        "cmake-js": "^7.2.1",
         "node-addon-api": "^5.0.0"
     }
 }
