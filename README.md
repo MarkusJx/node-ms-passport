@@ -1,5 +1,7 @@
 # node-ms-passport
 
+**Note: This addon has been deprecated in favour of [`passport-desktop`](https://github.com/MarkusJx/passport-desktop).**
+
 Microsoft Passport and Credential storage for Node.js. Only works on Windows. Obviously.
 Uses C# and C++ to store credentials and sign data. Typescript definitions are available.
 
